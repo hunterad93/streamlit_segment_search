@@ -14,7 +14,6 @@ index = pc.Index("3rd-party-data-v2")
 
 # Constants
 EMBEDDING_MODEL = "text-embedding-3-large"
-CHAT_MODEL = "gpt-4o"
 
 def generate_embedding(text):
     response = openai_client.embeddings.create(
@@ -153,6 +152,8 @@ def search_and_rank_segments(query, presearch_filter={}, top_k=500):
     
     return df_sorted
 
+
+
 def main():
     st.title("3rd Party Data Segment Search")
     st.subheader("Describe the audience segment you are looking for in a sentence.")
@@ -171,6 +172,25 @@ def main():
         
         # Calculate the combined score without adding it as a visible column
         combined_scores = results['UniqueUserCount'] * results['relevance_score']
+        
+        # Reorder columns
+        desired_order = [
+        'Name',
+        'BrandName',
+        'raw_string',
+        'relevance_score',
+        'UniqueUserCount',
+        'CPMRateInAdvertiserCurrency_Amount'
+        ]
+    
+        # Ensure all columns in desired_order exist in df
+        existing_columns = [col for col in desired_order if col in results.columns]
+        
+        # Add any remaining columns that weren't specified in desired_order
+        remaining_columns = [col for col in results.columns if col not in existing_columns]
+    
+        # Reorder the dataframe
+        results = results[existing_columns + remaining_columns]
         
         # Define a function for color scaling
         def color_scale(val):
