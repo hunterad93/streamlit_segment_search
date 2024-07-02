@@ -1,146 +1,15 @@
-from openai import OpenAI
-from pinecone import Pinecone
-import pandas as pd
-import json
-import concurrent.futures
-import re
 import streamlit as st
-from typing import List, Dict
+import pandas as pd
+import plotly.graph_objects as go
+from plotly.subplots import make_subplots
+from embedding import generate_embedding
+from pinecone_utils import query_pinecone
+from data_processing import results_to_dataframe
+from gpt_scoring import gpt_rerank_results
 
-# Initialize clients using Streamlit secrets
-openai_client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
-pc = Pinecone(api_key=st.secrets["PINECONE_API_KEY"])
-index = pc.Index("3rd-party-data-v2")
-
-# Constants
-EMBEDDING_MODEL = "text-embedding-3-large"
-
-def generate_embedding(text):
-    response = openai_client.embeddings.create(
-        model=EMBEDDING_MODEL,
-        input=[text],
-        encoding_format="float",
-        dimensions=256
-    )
-    return response.data[0].embedding
-
-def query_pinecone(query_embedding, top_k, presearch_filter={}):
-    results = index.query(
-        vector=query_embedding,
-        filter=presearch_filter,
-        top_k=top_k,
-        include_metadata=True
-    )
-    return results
-
-def flatten_dict(d, parent_key='', sep='_'):
-    items = []
-    for k, v in d.items():
-        new_key = f"{parent_key}{sep}{k}" if parent_key else k
-        if isinstance(v, dict):
-            items.extend(flatten_dict(v, new_key, sep=sep).items())
-        elif isinstance(v, list):
-            items.append((new_key, json.dumps(v)))
-        else:
-            items.append((new_key, v))
-    return dict(items)
-
-def results_to_dataframe(results):
-    data = []
-    for match in results.get('matches', []):  # Access 'matches' key from results dictionary
-        row = {
-            'id': match['id'],
-            'vector_score': match['score']
-        }
-        
-        # Handle metadata
-        metadata = match.get('metadata', {})
-        flattened_metadata = flatten_dict(metadata)
-        
-        # Create a new dictionary to store processed values
-        processed_metadata = {}
-        
-        # Handle potential JSON strings in metadata
-        for key, value in flattened_metadata.items():
-            if isinstance(value, str):
-                try:
-                    parsed_value = json.loads(value)
-                    if isinstance(parsed_value, dict):
-                        processed_metadata.update(flatten_dict(parsed_value, parent_key=key))
-                    else:
-                        processed_metadata[key] = value
-                except json.JSONDecodeError:
-                    processed_metadata[key] = value
-            else:
-                processed_metadata[key] = value
-        
-        row.update(processed_metadata)
-        data.append(row)
-    
-    df = pd.DataFrame(data)
-    return df
-
-def gpt_score_relevance(query: str, doc: str) -> float:
-    """
-    Score the relevance of a document to the query using GPT-3.5.
-    Returns a relevance score between 0 and 1.
-    """
-    prompt = f"""On a scale of 0 to 10, how similar is the actual segment to the desired segment?
-
-    Desired segment: "{query}"
-
-    Actual segment: "{doc}"
-
-    Provide only a numeric score between 0 and 10, where 0 is not relevant at all and 10 is extremely relevant.
-    """
-
-    response = openai_client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
-        max_tokens=100,
-        temperature=0
-    )
-
-   
-
-    result = response.choices[0].message.content.strip()
-    try:
-        # Use regex to find the first number in the response
-        match = re.search(r'\d+(?:\.\d+)?', result)
-        if match:
-            score = float(match.group()) / 10  # Normalize to 0-1 range
-            return max(0, min(score, 1))  # Ensure score is between 0 and 1
-        else:
-            raise ValueError("No number found in response")
-    except ValueError as e:
-        print(f"Error parsing score for document: {doc[:50]}... Error: {str(e)}")
-        return 0
-
-def gpt_rerank_results(query: str, docs: List[str], max_workers: int = 100) -> Dict[str, float]:
-    """
-    Rerank documents by scoring each document's relevance to the query using GPT-3.5.
-    Uses concurrent.futures to parallelize the scoring process.
-    Keeps track of total input tokens.
-    """
-    total_tokens = 0
-
-    def score_doc(doc):
-        nonlocal total_tokens
-        total_tokens += len(query.split()) + len(doc.split())
-        return doc, gpt_score_relevance(query, doc)
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        scores = dict(executor.map(score_doc, docs))
-    
-    # Calculate and print the number *1000000/50
-    token_cost = (total_tokens / 1000000) * 0.5
-    print(f"Estimated rerank cost: ${token_cost:.6f}")
-    
-    return scores
-
-def search_and_rank_segments(query, presearch_filter={}, top_k=500):
+def search_and_rank_segments(query: str, presearch_filter: dict = {}, top_k: int = 500) -> pd.DataFrame:
+    """Search and rank segments based on the given query."""
     query_embedding = generate_embedding(query)
-    
     query_results = query_pinecone(query_embedding, top_k, presearch_filter)
     df = results_to_dataframe(query_results)
     
@@ -148,31 +17,107 @@ def search_and_rank_segments(query, presearch_filter={}, top_k=500):
     confidence_scores = gpt_rerank_results(query, raw_strings)
     
     df['relevance_score'] = df['raw_string'].map(lambda x: confidence_scores.get(x, 0.0))
-    df_sorted = df.sort_values('relevance_score', ascending=False).reset_index(drop=True)
-    
+    df_sorted = df.sort_values(['relevance_score', 'CPMRateInAdvertiserCurrency_Amount'], 
+                               ascending=[False, True]).reset_index(drop=True)
     return df_sorted
 
+def create_scatter_plot(data, x_col, y_col, name, hovertemplate):
+    """Create a scatter plot trace with correct ID."""
+    return go.Scatter(
+        x=data[x_col],
+        y=data[y_col],
+        name=name,
+        mode='markers',
+        marker=dict(size=8, opacity=0.6),
+        text=data['id'],  # Use the 'id' column from the dataframe
+        hovertemplate=hovertemplate
+    )
 
+def create_subplot(plot_data, row, col, x_col, y_col, name, hovertemplate, y_axis_type=None):
+    """Create a subplot with given data and parameters."""
+    trace = create_scatter_plot(plot_data, x_col, y_col, name, hovertemplate)
+    fig.add_trace(trace, row=row, col=col)
+    
+    fig.update_xaxes(title_text="Relevance Score", row=row, col=col)
+    fig.update_yaxes(title_text=name, row=row, col=col)
+    
+    if y_axis_type:
+        fig.update_yaxes(type=y_axis_type, row=row, col=col)
+
+
+def create_visualization(results):
+    """Create and display data visualization."""
+    st.subheader("Data Visualization")
+
+    plot_data = results.head(500).copy()
+    plot_data['CPMRateInAdvertiserCurrency_Amount'] = plot_data['CPMRateInAdvertiserCurrency_Amount'].fillna(0)
+    plot_data['PercentOfMediaCostRate'] = plot_data['PercentOfMediaCostRate'].fillna(0)
+
+    global fig
+    fig = make_subplots(
+        rows=2, cols=2,
+        subplot_titles=("Relevance vs CPM Rate",
+                        "Relevance vs Unique User Count",
+                        "Relevance vs Percent of Media Cost Rate",
+                        "Relevance vs Unique CTV Count"),
+        horizontal_spacing=0.15,
+        vertical_spacing=0.2
+    )
+
+    create_subplot(plot_data, 1, 1, 'relevance_score', 'CPMRateInAdvertiserCurrency_Amount',
+                   'CPM Rate ($)', '<b>ID: %{text}</b><br>Relevance: %{x:.2f}<br>CPM Rate: $%{y:.2f}')
+
+    create_subplot(plot_data, 1, 2, 'relevance_score', 'UniqueUserCount',
+                   'User Count', '<b>ID: %{text}</b><br>Relevance: %{x:.2f}<br>User Count: %{y:,}',
+                   y_axis_type="log")
+
+    create_subplot(plot_data, 2, 1, 'relevance_score', 'PercentOfMediaCostRate',
+                   '% Media Cost', '<b>ID: %{text}</b><br>Relevance: %{x:.2f}<br>% Media Cost: %{y:.2%}')
+    fig.update_yaxes(tickformat='.0%', row=2, col=1)
+
+    create_subplot(plot_data, 2, 2, 'relevance_score', 'UniqueConnectedTvCount',
+                   'Unique CTV Count', '<b>ID: %{text}</b><br>Relevance: %{x:.2f}<br>Unique CTV Count: %{y:.4f}')
+
+    fig.update_layout(
+        height=1000, width=1200,
+        title_text="Relevance Score Comparisons",
+        showlegend=False,
+        template="plotly_white"
+    )
+
+    min_relevance = plot_data['relevance_score'].min()
+    max_relevance = plot_data['relevance_score'].max()
+
+    for i in range(1, 3):
+        for j in range(1, 3):
+            fig.update_xaxes(range=[min_relevance - 0.1, max_relevance + 0.1], row=i, col=j)
+
+    st.plotly_chart(fig)
 
 def main():
     st.title("3rd Party Data Segment Search")
     st.subheader("Describe the audience segment you are looking for in a sentence.")
 
     query = st.text_input("Enter your search query:")
+    
+    # Add a slider for search depth
+    search_depth = st.slider("Search Depth", min_value=100, max_value=1000, value=500, step=100,
+                             help="Adjust the number of top results to retrieve and rank")
+
     search_button = st.button("Search")
 
     if search_button and query:
         st.header(f"Search Results for: {query}")
-        with st.spinner("Searching and ranking segments..."):
-            results = search_and_rank_segments(query)
+        with st.spinner(f"Searching and ranking top {search_depth} segments..."):
+            results = search_and_rank_segments(query, top_k=search_depth)
 
         st.success("Search completed!")
 
-        st.subheader("Top 500 Segments")
+        st.subheader(f"Top {search_depth} Segments")
         
         # Calculate the combined score without adding it as a visible column
-        combined_scores = results['UniqueUserCount'] * results['relevance_score']
-        
+        combined_scores = (results['relevance_score'] * 10) / (results['CPMRateInAdvertiserCurrency_Amount'])
+
         # Reorder columns
         desired_order = [
         'Name',
@@ -206,6 +151,9 @@ def main():
 
         # Display the styled dataframe
         st.dataframe(styled_results)
+
+        # Create and display data visualization
+        create_visualization(results)
 
         csv = results.to_csv(index=False)
         st.download_button(
