@@ -14,46 +14,7 @@ index = pc.Index("3rd-party-data")
 
 # Constants
 EMBEDDING_MODEL = "text-embedding-3-large"
-TOP_K = 300
 CHAT_MODEL = "gpt-4o"
-
-def generate_search_terms(query):
-    messages = [
-        {"role": "system", "content": "You are an assistant tasked with generating relevant search term for a given query. The search term you generate will be used to search a 3rd party data marketplace, returning data segments by their description."},
-        {"role": "user", "content": f"Generate a search term for the following query: {query}"}
-    ]
-    response = openai_client.chat.completions.create(
-        model=CHAT_MODEL,
-        messages=messages,
-        max_tokens=100,
-        temperature=0
-    )
-    term = response.choices[0].message.content
-    print("Generated search term:", term)
-    return term
-
-def generate_audience_segment_description(query):
-    messages = [
-        {"role": "system", "content": """You are an assistant tasked with generating audience segment descriptions
-          based on a given query. Concisely describe a 3rd party audience segment for sale that would be ideal to market to and likely to exist given the needs of the user. 
-         
-         Here are some examples of audience segment descriptions:
-         1. 'This Consumer Financial Insights Household Deposits segment contains consumers who are likely to have household deposits balance in tier 1 (highest). Household deposits include checking, savings, money market, and certificate of deposit (CD).'
-         2. 'This Regulation B (RegB) friendly audience contains individuals who are projected to spend $300 or more on reading in the next 12-months, putting them in the top 2% of spenders on reading in the U.S. AnalyticsIQ defines Protected Class as any data that includes age, sex, race, religion, national origin, marital status, or receipt of public assistance data.'
-         3. 'Individuals interested in Snacks and Candy based on surveys, online/purchase data, and social media data.'
-         """},
-        {"role": "user", "content": f"Generate a detailed audience segment description for the following query: {query}"}
-    ]
-    response = openai_client.chat.completions.create(
-        model=CHAT_MODEL,
-        messages=messages,
-        max_tokens=300,
-        temperature=0
-    )
-    print(response.choices[0].message.content)
-    return response.choices[0].message.content
-
-
 
 def generate_embedding(text):
     response = openai_client.embeddings.create(
@@ -64,11 +25,11 @@ def generate_embedding(text):
     )
     return response.data[0].embedding
 
-def query_pinecone(query_embedding, presearch_filter={}):
+def query_pinecone(query_embedding, top_k, presearch_filter={}):
     results = index.query(
         vector=query_embedding,
         filter=presearch_filter,
-        top_k=TOP_K,
+        top_k=top_k,
         include_metadata=True
     )
     return results
@@ -170,24 +131,11 @@ def gpt_rerank_results(query: str, docs: List[str], max_workers: int = 100) -> D
     
     return scores
 
-def search_and_rank_segments(query, presearch_filter={}):
-    term = generate_search_terms(query)
-    audience_segment_description = generate_audience_segment_description(query)
-    
+def search_and_rank_segments(query, presearch_filter={}, top_k=500):
     query_embedding = generate_embedding(query)
-    term_embedding = generate_embedding(term)
-    description_embedding = generate_embedding(audience_segment_description)
     
-    query_results = query_pinecone(query_embedding, presearch_filter)
-    term_results = query_pinecone(term_embedding, presearch_filter)
-    description_results = query_pinecone(description_embedding, presearch_filter)
-    
-    df_query = results_to_dataframe(query_results).assign(source='query')
-    df_term = results_to_dataframe(term_results).assign(source='term')
-    df_description = results_to_dataframe(description_results).assign(source='description')
-    
-    df = pd.concat([df_query, df_term, df_description], ignore_index=True)
-    df = df.drop_duplicates(subset='id', keep='first').reset_index(drop=True)
+    query_results = query_pinecone(query_embedding, top_k, presearch_filter)
+    df = results_to_dataframe(query_results)
     
     raw_strings = df['raw_string'].tolist()
     confidence_scores = gpt_rerank_results(query, raw_strings)
@@ -195,7 +143,6 @@ def search_and_rank_segments(query, presearch_filter={}):
     df['relevance_score'] = df['raw_string'].map(lambda x: confidence_scores.get(x, 0.0))
     df_sorted = df.sort_values('relevance_score', ascending=False).reset_index(drop=True)
     
-    # Include all columns in the final result
     return df_sorted.head(100)
 
 def main():
@@ -206,23 +153,20 @@ def main():
     search_button = st.button("Search")
 
     if search_button and query:
-        # Display the query as a header
         st.header(f"Search Results for: {query}")
         with st.spinner("Searching and ranking segments..."):
             results = search_and_rank_segments(query)
 
         st.success("Search completed!")
 
-        # Display results as a table
         st.subheader("Top 100 Segments")
         st.dataframe(results)
 
-        # Add a download button for CSV
         csv = results.to_csv(index=False)
         st.download_button(
             label="Download results as CSV",
             data=csv,
-            file_name="top_100_segments_with_metadata.csv",
+            file_name="top_100_segments.csv",
             mime="text/csv"
         )
 
