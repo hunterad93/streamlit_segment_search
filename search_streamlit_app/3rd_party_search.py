@@ -10,7 +10,7 @@ from typing import List, Dict
 # Initialize clients using Streamlit secrets
 openai_client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
 pc = Pinecone(api_key=st.secrets["PINECONE_API_KEY"])
-index = pc.Index("3rd-party-data")
+index = pc.Index("3rd-party-data-v2")
 
 # Constants
 EMBEDDING_MODEL = "text-embedding-3-large"
