@@ -143,7 +143,7 @@ def search_and_rank_segments(query, presearch_filter={}, top_k=500):
     df['relevance_score'] = df['raw_string'].map(lambda x: confidence_scores.get(x, 0.0))
     df_sorted = df.sort_values('relevance_score', ascending=False).reset_index(drop=True)
     
-    return df_sorted.head(100)
+    return df_sorted
 
 def main():
     st.title("3rd Party Data Segment Search")
@@ -159,14 +159,31 @@ def main():
 
         st.success("Search completed!")
 
-        st.subheader("Top 100 Segments")
-        st.dataframe(results)
+        st.subheader("Top 500 Segments")
+        
+        # Calculate the combined score without adding it as a visible column
+        combined_scores = results['UniqueUserCount'] * results['relevance_score']
+        
+        # Define a function for color scaling
+        def color_scale(val):
+            normalized = (val - combined_scores.min()) / (combined_scores.max() - combined_scores.min())
+            return f'background-color: rgba({int(255 * (1-normalized))}, {int(255 * normalized)}, 0, 0.3)'
+
+        # Apply the color scaling to the 'raw_string' column
+        styled_results = results.style.apply(
+            lambda _: [color_scale(score) for score in combined_scores],
+            axis=0,
+            subset=['raw_string']
+        )
+
+        # Display the styled dataframe
+        st.dataframe(styled_results)
 
         csv = results.to_csv(index=False)
         st.download_button(
             label="Download results as CSV",
             data=csv,
-            file_name="top_100_segments.csv",
+            file_name="top_500_segments.csv",
             mime="text/csv"
         )
 
