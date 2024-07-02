@@ -29,7 +29,7 @@ def create_scatter_plot(data, x_col, y_col, name, hovertemplate):
         name=name,
         mode='markers',
         marker=dict(size=8, opacity=0.6),
-        text=data['id'],  # Use the 'id' column from the dataframe
+        text=data['Name'],  # Use the 'id' column from the dataframe
         hovertemplate=hovertemplate
     )
 
@@ -88,11 +88,16 @@ def create_visualization(results):
     min_relevance = plot_data['relevance_score'].min()
     max_relevance = plot_data['relevance_score'].max()
 
+    # Add all columns as custom data
     for i in range(1, 3):
         for j in range(1, 3):
-            fig.update_xaxes(range=[min_relevance - 0.1, max_relevance + 0.1], row=i, col=j)
+            fig.data[2*(i-1)+j-1].customdata = results
 
-    st.plotly_chart(fig)
+    # Enable clicking on the plot
+    fig.update_layout(clickmode='event+select')
+
+    # Use Streamlit's plotly_chart with custom_events
+    return st.plotly_chart(fig, use_container_width=True, custom_events=['click'])
 
 def main():
     st.title("3rd Party Data Segment Search")
@@ -102,7 +107,7 @@ def main():
     
     # Add a slider for search depth
     search_depth = st.slider("Search Depth", min_value=100, max_value=1000, value=500, step=100,
-                             help="Adjust the number of top results to retrieve and rank")
+                             help="Adjust the number of top results to retrieve and rank, cost is around 1 cent per 250 depth.")
 
     search_button = st.button("Search")
 
