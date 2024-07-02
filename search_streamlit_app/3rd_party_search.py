@@ -121,13 +121,21 @@ def gpt_rerank_results(query: str, docs: List[str], max_workers: int = 100) -> D
     """
     Rerank documents by scoring each document's relevance to the query using GPT-3.5.
     Uses concurrent.futures to parallelize the scoring process.
+    Keeps track of total input tokens.
     """
+    total_tokens = 0
 
     def score_doc(doc):
+        nonlocal total_tokens
+        total_tokens += len(query.split()) + len(doc.split())
         return doc, gpt_score_relevance(query, doc)
 
     with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
         scores = dict(executor.map(score_doc, docs))
+    
+    # Calculate and print the number *1000000/50
+    token_cost = (total_tokens / 1000000) * 0.5
+    print(f"Estimated rerank cost: ${token_cost:.6f}")
     
     return scores
 
