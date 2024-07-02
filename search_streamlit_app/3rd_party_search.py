@@ -26,7 +26,7 @@ def generate_search_terms(query):
         model=CHAT_MODEL,
         messages=messages,
         max_tokens=100,
-        temperature=0.2
+        temperature=0
     )
     term = response.choices[0].message.content
     print("Generated search term:", term)
@@ -48,7 +48,7 @@ def generate_audience_segment_description(query):
         model=CHAT_MODEL,
         messages=messages,
         max_tokens=300,
-        temperature=0.2
+        temperature=0
     )
     print(response.choices[0].message.content)
     return response.choices[0].message.content
