@@ -142,8 +142,9 @@ def main():
         # Reorder the dataframe
         results = results[existing_columns + remaining_columns]
         
-        # Define a function for color scaling
         def color_scale(val):
+            if pd.isna(val):
+                return 'background-color: rgba(200, 200, 200, 0.3)'  # Gray for NaN values
             normalized = (val - combined_scores.min()) / (combined_scores.max() - combined_scores.min())
             return f'background-color: rgba({int(255 * (1-normalized))}, {int(255 * normalized)}, 0, 0.3)'
 
