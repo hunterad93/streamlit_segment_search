@@ -128,12 +128,12 @@ def style_dataframe(df, combined_scores):
 def main():
     st.set_page_config(layout="wide")
     st.title("3rd Party Data Segment Search")
-    st.subheader("Describe the audience segment you are looking for in a sentence.")
+    st.subheader("Describe the audience segment you are looking for in a few words.")
 
     query = st.text_input("Enter your search query:")
     
     # Add a slider for search depth
-    search_depth = st.slider("Search Depth", min_value=100, max_value=400, value=250, step=100,
+    search_depth = st.slider("Search Depth", min_value=100, max_value=500, value=300, step=100,
                              help="Adjust the number of top results to retrieve and rank, cost is around 1 cent per 250 depth.")
 
     search_button = st.button("Search")
