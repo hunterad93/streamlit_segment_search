@@ -53,7 +53,7 @@ JSON_AUDIENCE_BUILD_PROMPT = """Excellent, could you now reformat this into a st
 
 INCLUDED_IMPROVING_PROMPT = """Please improve the included segments to better target the intended customers. The best inclusion strategy will target a set of less specific groups whose overlap matches the target audience. Provide the updated JSON structure with the improved segments."""
 
-EXCLUDED_IMPROVING_PROMPT = """Please improve the excluded segments to better refine our target audience. A good exclusion strategy should be thoughtful about the various audience segments who would not be part of the target audience. Provide the updated JSON structure with the improved segments."""
+EXCLUDED_IMPROVING_PROMPT = """Refine the excluded segments for optimal customer targeting. An effective exclusion strategy excludes many generic groups whose intersection represents low-conversion prospects. Return the updated JSON structure with enhanced exclusion segments."""
 
 ### Search prompts
 

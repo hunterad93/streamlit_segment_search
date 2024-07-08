@@ -52,6 +52,10 @@ def main():
         search_depth = st.slider("Select search depth:", min_value=10, max_value=50, value=10, step=10)
         
         if st.button("Search Actual Segments"):
+            # Clear previous results when searching again
+            st.session_state.pop('processed_results', None)
+            st.session_state.pop('summary_results', None)
+            st.session_state.pop('audience_report', None)
             st.session_state.stage = 3
 
         if st.session_state.stage >= 3:
