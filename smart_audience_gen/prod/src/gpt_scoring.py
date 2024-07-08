@@ -1,12 +1,10 @@
-from openai import OpenAI
 import re
 from typing import List, Dict
 import concurrent.futures
 import pandas as pd
 
-from config import OPENAI_API_KEY, NON_US_LOCATIONS
-
-client = OpenAI(api_key=OPENAI_API_KEY)
+from config import NON_US_LOCATIONS, RERANK_PROMPT, MAX_RERANK_WORKERS, RELEVANCE_THRESHOLD, RERANK_TOP_K, FALLBACK_TOP_K, RERANKER_MODEL
+from .api_clients import openai_client
 
 def filter_non_us(df: pd.DataFrame) -> pd.DataFrame:
     
@@ -21,29 +19,19 @@ def filter_non_us(df: pd.DataFrame) -> pd.DataFrame:
     
     return df[df.apply(contains_non_us_location, axis=1)]
 
-
-
 def gpt_score_relevance(query: str, doc: str) -> float:
     """
     Score the relevance of a document to the query using GPT-3.5.
     Returns a relevance score between 0 and 1.
     """
-    prompt = f"""On a scale of 0 to 10, how similar is the actual segment to the desired segment?
 
-    Desired segment: "{query}"
-
-    Actual segment: "{doc}"
-
-    Provide only a numeric score between 0 and 10, where 0 is not relevant at all and 10 is extremely relevant.
-    If an actual segment has a non-us location mentioned in it, give it a 0.
-    """
-
-    # if contains_non_us_location(doc):
-    #     return 0
-
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
-        messages=[{"role": "user", "content": prompt}],
+    formatted_rerank_prompt = RERANK_PROMPT.format(
+        query=query,
+        doc=doc
+    )
+    response = openai_client.chat.completions.create(
+        model=RERANKER_MODEL,
+        messages=[{"role": "user", "content": formatted_rerank_prompt}],
         max_tokens=100,
         temperature=0
     )
@@ -62,7 +50,7 @@ def gpt_score_relevance(query: str, doc: str) -> float:
         print(f"Error parsing score for document: {doc[:50]}... Error: {str(e)}")
         return 0
 
-def gpt_rerank_results(query: str, docs: List[str], max_workers: int = 100) -> Dict[str, float]:
+def gpt_rerank_results(query: str, docs: List[str], max_workers: int = MAX_RERANK_WORKERS) -> Dict[str, float]:
     """
     Rerank documents by scoring each document's relevance to the query using GPT-3.5.
     Uses concurrent.futures to parallelize the scoring process.
@@ -84,7 +72,7 @@ def gpt_rerank_results(query: str, docs: List[str], max_workers: int = 100) -> D
     
     return scores
 
-def filter_high_relevance_segments(df: pd.DataFrame, relevance_threshold: float = 0.8, top_k: int = 10, fallback_k: int = 0) -> pd.DataFrame:
+def filter_high_relevance_segments(df: pd.DataFrame, relevance_threshold: float = RELEVANCE_THRESHOLD, top_k: int = RERANK_TOP_K, fallback_k: int = FALLBACK_TOP_K) -> pd.DataFrame:
     """
     Filter segments with high relevance scores.
     
