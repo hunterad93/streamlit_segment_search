@@ -2,22 +2,40 @@ from openai import OpenAI
 import re
 from typing import List, Dict
 import concurrent.futures
-from config import OPENAI_API_KEY
+from config import OPENAI_API_KEY, NON_US_LOCATIONS
+import pandas as pd
 
 client = OpenAI(api_key=OPENAI_API_KEY)
+
+def filter_non_us(df: pd.DataFrame) -> pd.DataFrame:
+    
+    def contains_non_us_location(row):
+        concatenated = ' '.join(row.astype(str))
+        for location in NON_US_LOCATIONS:
+            if re.search(r'\b' + re.escape(location) + r'\b', concatenated, re.IGNORECASE):
+                print(f"Filtering out: {concatenated}")
+                print(f"Matched location: {location}")
+                return False
+        return True
+    
+    return df[df.apply(contains_non_us_location, axis=1)]
+
+def filter_duplicates(df: pd.DataFrame) -> pd.DataFrame:
+    return df.drop_duplicates(subset=['Segment Description', 'Segment Name'], keep='first')
 
 def gpt_score_relevance(query: str, doc: str) -> float:
     """
     Score the relevance of a document to the query using GPT-3.5.
     Returns a relevance score between 0 and 1.
     """
-    prompt = f"""On a scale of 0 to 10, how similar is the actual segment to the desired segment?
+
+    prompt = f"""On a scale of 0 to 100, how similar is the actual segment to the desired segment?
 
     Desired segment: "{query}"
 
     Actual segment: "{doc}"
 
-    Provide only a numeric score between 0 and 10, where 0 is not relevant at all and 10 is extremely relevant.
+    Provide only a numeric score between 0 and 100, where 0 is not relevant at all and 100 is extremely relevant.
     """
 
     response = client.chat.completions.create(
@@ -34,7 +52,7 @@ def gpt_score_relevance(query: str, doc: str) -> float:
         # Use regex to find the first number in the response
         match = re.search(r'\d+(?:\.\d+)?', result)
         if match:
-            score = float(match.group()) / 10  # Normalize to 0-1 range
+            score = float(match.group()) / 100  # Normalize to 0-1 range in thousands place
             return max(0, min(score, 1))  # Ensure score is between 0 and 1
         else:
             raise ValueError("No number found in response")

@@ -5,20 +5,21 @@ from plotly.subplots import make_subplots
 from embedding import generate_embedding
 from pinecone_utils import query_pinecone
 from data_processing import results_to_dataframe
-from gpt_scoring import gpt_rerank_results
+from gpt_scoring import gpt_rerank_results, filter_non_us, filter_duplicates
 
-def search_and_rank_segments(query: str, presearch_filter: dict = {}, top_k: int = 500) -> pd.DataFrame:
+def search_and_rank_segments(query: str, presearch_filter: dict = {}, top_k: int = 250) -> pd.DataFrame:
     """Search and rank segments based on the given query."""
     query_embedding = generate_embedding(query)
     query_results = query_pinecone(query_embedding, top_k, presearch_filter)
     df = results_to_dataframe(query_results)
+    df = filter_non_us(df)
+    segment_descriptions = df['Segment Description'].tolist()
+    confidence_scores = gpt_rerank_results(query, segment_descriptions)
     
-    raw_strings = df['raw_string'].tolist()
-    confidence_scores = gpt_rerank_results(query, raw_strings)
-    
-    df['relevance_score'] = df['raw_string'].map(lambda x: confidence_scores.get(x, 0.0))
-    df_sorted = df.sort_values(['relevance_score', 'CPMRateInAdvertiserCurrency_Amount'], 
+    df['Relevance Score'] = df['Segment Description'].map(lambda x: confidence_scores.get(x, 0.0))
+    df_sorted = df.sort_values(['Relevance Score', 'CPM Rate'], 
                                ascending=[False, True]).reset_index(drop=True)
+    df_sorted = filter_duplicates(df_sorted)
     return df_sorted
 
 def create_scatter_plot(data, x_col, y_col, name, hovertemplate):
@@ -29,7 +30,7 @@ def create_scatter_plot(data, x_col, y_col, name, hovertemplate):
         name=name,
         mode='markers',
         marker=dict(size=8, opacity=0.6),
-        text=data['Name'],  # Use the 'id' column from the dataframe
+        text=data['Segment ID'],  # Use the 'id' column from the dataframe
         hovertemplate=hovertemplate
     )
 
@@ -50,7 +51,7 @@ def create_visualization(results):
     st.subheader("Data Visualization")
 
     plot_data = results.head(500).copy()
-    plot_data['CPMRateInAdvertiserCurrency_Amount'] = plot_data['CPMRateInAdvertiserCurrency_Amount'].fillna(0)
+    plot_data['CPM Rate'] = plot_data['CPM Rate'].fillna(0)
     plot_data['PercentOfMediaCostRate'] = plot_data['PercentOfMediaCostRate'].fillna(0)
 
     global fig
@@ -64,18 +65,18 @@ def create_visualization(results):
         vertical_spacing=0.2
     )
 
-    create_subplot(plot_data, 1, 1, 'relevance_score', 'CPMRateInAdvertiserCurrency_Amount',
+    create_subplot(plot_data, 1, 1, 'Relevance Score', 'CPM Rate',
                    'CPM Rate ($)', '<b>ID: %{text}</b><br>Relevance: %{x:.2f}<br>CPM Rate: $%{y:.2f}')
 
-    create_subplot(plot_data, 1, 2, 'relevance_score', 'UniqueUserCount',
+    create_subplot(plot_data, 1, 2, 'Relevance Score', 'Unique User Count',
                    'User Count', '<b>ID: %{text}</b><br>Relevance: %{x:.2f}<br>User Count: %{y:,}',
                    y_axis_type="log")
 
-    create_subplot(plot_data, 2, 1, 'relevance_score', 'PercentOfMediaCostRate',
+    create_subplot(plot_data, 2, 1, 'Relevance Score', 'PercentOfMediaCostRate',
                    '% Media Cost', '<b>ID: %{text}</b><br>Relevance: %{x:.2f}<br>% Media Cost: %{y:.2%}')
     fig.update_yaxes(tickformat='.0%', row=2, col=1)
 
-    create_subplot(plot_data, 2, 2, 'relevance_score', 'UniqueConnectedTvCount',
+    create_subplot(plot_data, 2, 2, 'Relevance Score', 'UniqueConnectedTvCount',
                    'Unique CTV Count', '<b>ID: %{text}</b><br>Relevance: %{x:.2f}<br>Unique CTV Count: %{y:.4f}')
 
     fig.update_layout(
@@ -85,8 +86,8 @@ def create_visualization(results):
         template="plotly_white"
     )
 
-    min_relevance = plot_data['relevance_score'].min()
-    max_relevance = plot_data['relevance_score'].max()
+    min_relevance = plot_data['Relevance Score'].min()
+    max_relevance = plot_data['Relevance Score'].max()
 
     # Add all columns as custom data
     for i in range(1, 3):
@@ -99,14 +100,40 @@ def create_visualization(results):
     # Use Streamlit's plotly_chart with custom_events
     return st.plotly_chart(fig, use_container_width=True, custom_events=['click'])
 
+def style_dataframe(df, combined_scores):
+    def color_scale(val):
+        if pd.isna(val):
+            return 'background-color: rgba(200, 200, 200, 0.3)'  # Gray for NaN values
+        normalized = (val - combined_scores.min()) / (combined_scores.max() - combined_scores.min())
+        return f'background-color: rgba({int(255 * (1-normalized))}, {int(255 * normalized)}, 0, 0.3)'
+
+    def color_name(val):
+        if val == "Highly Likely":
+            return 'background-color: rgba(0, 0, 255, 0.3); color: white'  # Dark blue for Highly Likely with opacity .3
+        elif val == "Likely":
+            return 'background-color: rgba(173, 216, 230, 0.3); color: black'  # Light blue for Likely with opacity .3
+        return ''
+
+    df['Relevance Score'] = df['Relevance Score'].apply(lambda x: f'{x:.3f}')
+
+    # Apply the color scaling to the 'Segment Description' column and color to the 'Segment Name' column based on its content
+    styled_df = df.style.apply(
+        lambda _: [color_scale(score) for score in combined_scores],
+        axis=0,
+        subset=['Segment Description']
+    ).applymap(color_name, subset=['Segment Name'])
+
+    return styled_df
+
 def main():
+    st.set_page_config(layout="wide")
     st.title("3rd Party Data Segment Search")
     st.subheader("Describe the audience segment you are looking for in a sentence.")
 
     query = st.text_input("Enter your search query:")
     
     # Add a slider for search depth
-    search_depth = st.slider("Search Depth", min_value=100, max_value=1000, value=500, step=100,
+    search_depth = st.slider("Search Depth", min_value=100, max_value=400, value=250, step=100,
                              help="Adjust the number of top results to retrieve and rank, cost is around 1 cent per 250 depth.")
 
     search_button = st.button("Search")
@@ -121,42 +148,41 @@ def main():
         st.subheader(f"Top {search_depth} Segments")
         
         # Calculate the combined score without adding it as a visible column
-        combined_scores = (results['relevance_score'] * 10) / (results['CPMRateInAdvertiserCurrency_Amount'])
+        combined_scores = (results['Relevance Score'] * 10) / (results['CPM Rate'])
 
-        # Reorder columns
-        desired_order = [
-        'Name',
-        'BrandName',
-        'raw_string',
-        'relevance_score',
-        'UniqueUserCount',
-        'CPMRateInAdvertiserCurrency_Amount'
+        # Define essential columns
+        essential_columns = [
+            'Segment Name',
+            'Brand Name',
+            'Segment Description',
+            'Relevance Score',
+            'Unique User Count',
+            'CPM Rate',
+            'Segment ID'
         ]
     
-        # Ensure all columns in desired_order exist in df
-        existing_columns = [col for col in desired_order if col in results.columns]
+        # Ensure all essential columns exist in df
+        existing_essential_columns = [col for col in essential_columns if col in results.columns]
         
-        # Add any remaining columns that weren't specified in desired_order
-        remaining_columns = [col for col in results.columns if col not in existing_columns]
-    
-        # Reorder the dataframe
-        results = results[existing_columns + remaining_columns]
+        # Identify additional columns
+        additional_columns = [col for col in results.columns if col not in existing_essential_columns]
+
+        # Create a dataframe with only essential columns
+        essential_df = results[existing_essential_columns]
+
+        # Style the essential dataframe
+        styled_essential_df = style_dataframe(essential_df, combined_scores)
+
+        # Display the styled essential dataframe
+        st.dataframe(styled_essential_df)
+
+        # Create an expander for additional columns
+        with st.expander("Show all columns"):
+            full_df = results[existing_essential_columns + additional_columns]
+            styled_full_df = style_dataframe(full_df, combined_scores)
+            st.dataframe(styled_full_df)
         
-        def color_scale(val):
-            if pd.isna(val):
-                return 'background-color: rgba(200, 200, 200, 0.3)'  # Gray for NaN values
-            normalized = (val - combined_scores.min()) / (combined_scores.max() - combined_scores.min())
-            return f'background-color: rgba({int(255 * (1-normalized))}, {int(255 * normalized)}, 0, 0.3)'
-
-        # Apply the color scaling to the 'raw_string' column
-        styled_results = results.style.apply(
-            lambda _: [color_scale(score) for score in combined_scores],
-            axis=0,
-            subset=['raw_string']
-        )
-
-        # Display the styled dataframe
-        st.dataframe(styled_results)
+        
 
         # Create and display data visualization
         create_visualization(results)

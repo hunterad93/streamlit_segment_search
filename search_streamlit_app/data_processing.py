@@ -14,34 +14,48 @@ def flatten_dict(d, parent_key='', sep='_'):
             items.append((new_key, v))
     return dict(items)
 
+def process_metadata(flattened_metadata):
+    processed_metadata = {}
+    for key, value in flattened_metadata.items():
+        if isinstance(value, str):
+            try:
+                parsed_value = json.loads(value)
+                if isinstance(parsed_value, dict):
+                    processed_metadata.update(flatten_dict(parsed_value, parent_key=key))
+                else:
+                    processed_metadata[key] = value
+            except json.JSONDecodeError:
+                processed_metadata[key] = value
+        else:
+            processed_metadata[key] = value
+    return processed_metadata
+
 def results_to_dataframe(results):
     data = []
-    for match in results.get('matches', []):  # Access 'matches' key from results dictionary
+    for match in results.get('matches', []):
         row = {
-            'id': match['id'],
-            'vector_score': match['score']
+            'Segment ID': match['id'],
+            'similarity_score': match['score']
         }
         
-        # Handle metadata
         metadata = match.get('metadata', {})
         flattened_metadata = flatten_dict(metadata)
         
-        # Create a new dictionary to store processed values
-        processed_metadata = {}
+        processed_metadata = process_metadata(flattened_metadata)
         
-        # Handle potential JSON strings in metadata
-        for key, value in flattened_metadata.items():
-            if isinstance(value, str):
-                try:
-                    parsed_value = json.loads(value)
-                    if isinstance(parsed_value, dict):
-                        processed_metadata.update(flatten_dict(parsed_value, parent_key=key))
-                    else:
-                        processed_metadata[key] = value
-                except json.JSONDecodeError:
-                    processed_metadata[key] = value
-            else:
-                processed_metadata[key] = value
+        # Rename specific columns for better readability
+        column_mapping = {
+            'Name': 'Segment Name',
+            'BrandName': 'Brand Name',
+            'raw_string': 'Segment Description',
+            'relevance_score': 'Relevance Score',
+            'UniqueUserCount': 'Unique User Count',
+            'CPMRateInAdvertiserCurrency_Amount': 'CPM Rate'
+        }
+        
+        for old_name, new_name in column_mapping.items():
+            if old_name in processed_metadata:
+                processed_metadata[new_name] = processed_metadata.pop(old_name)
         
         row.update(processed_metadata)
         data.append(row)
