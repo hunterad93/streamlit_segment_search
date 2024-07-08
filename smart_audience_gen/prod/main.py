@@ -100,7 +100,13 @@ def main():
             st.session_state.final_edited_json = edited_json
             st.session_state.stage = 4
 
- 
+    if st.session_state.stage >= 4:
+        # Process audience segments only if not already processed
+        if 'processed_results' not in st.session_state:
+            processed_results = process_audience_segments(st.session_state.final_edited_json)
+            st.session_state.processed_results = processed_results
+        st.session_state.stage = 5
+
     if st.session_state.stage >= 5:
         if 'summary_results' not in st.session_state:
             summary_results = summarize_segments(st.session_state.processed_results)
