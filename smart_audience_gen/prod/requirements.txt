@@ -1,0 +1,6 @@
+streamlit
+openai
+groq
+pinecone-client
+pandas
+requests

@@ -23,7 +23,7 @@ def search_and_rank_segments(query: str, presearch_filter: dict = {}, top_k: int
     return df_sorted
 
 
-def process_audience_segments(audience_json):
+def process_audience_segments(audience_json, presearch_filter={}, top_k=10):
     results = {'Audience': {}}
     for category in ['included', 'excluded']:
         results['Audience'][category] = {}
@@ -31,7 +31,7 @@ def process_audience_segments(audience_json):
             group_results = []
             for item in descriptions:
                 query = item['description']
-                df = search_and_rank_segments(query)
+                df = search_and_rank_segments(query, top_k=top_k)
                 df = filter_non_us(df)
                 relevant_segments = filter_high_relevance_segments(df, relevance_threshold=0.9, top_k=3, fallback_k=0).to_dict('records')
                 group_results.append({
