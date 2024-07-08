@@ -101,24 +101,29 @@ def main():
             st.session_state.stage = 4
 
     if st.session_state.stage >= 4:
-        processed_results = process_audience_segments(st.session_state.final_edited_json)
-        st.session_state.processed_results = processed_results
+        # Process audience segments only if not already processed
+        if 'processed_results' not in st.session_state:
+            processed_results = process_audience_segments(st.session_state.final_edited_json)
+            st.session_state.processed_results = processed_results
         st.session_state.stage = 5
 
     if st.session_state.stage >= 5:
-        # Intervention point 3: Review processed results
-        st.subheader("Review Processed Results")
-        st.json(st.session_state.processed_results)
-        if st.button("Continue with Processed Results"):
-            st.session_state.stage = 6
+        if 'summary_results' not in st.session_state:
+            summary_results = summarize_segments(st.session_state.processed_results)
+            st.session_state.summary_results = summary_results
+        st.json(st.session_state.summary_results)
+        
+        if 'audience_report' not in st.session_state:
+            audience_report = generate_audience_report(st.session_state.summary_results, company_name)
+            st.session_state.audience_report = audience_report
+        st.markdown(st.session_state.audience_report[0])
+        st.session_state.stage = 6
 
     if st.session_state.stage >= 6:
-        summary_results = summarize_segments(st.session_state.processed_results)
-        st.json(summary_results)
-        audience_report = generate_audience_report(summary_results, company_name)
-        st.markdown(audience_report[0])
-        if st.button("Start Over"):
-            st.session_state.clear()
+        #TODO Add logic for creating actual ttd audience
+        if st.button("Continue with Processed Results"):
+            st.session_state.stage = 7
+
 
 if __name__ == "__main__":
     main()
