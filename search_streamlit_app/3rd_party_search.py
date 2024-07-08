@@ -185,15 +185,15 @@ def main():
         
 
         # Create and display data visualization
-        create_visualization(results)
+        # create_visualization(results)
 
-        csv = results.to_csv(index=False)
-        st.download_button(
-            label="Download results as CSV",
-            data=csv,
-            file_name="top_500_segments.csv",
-            mime="text/csv"
-        )
+        # csv = results.to_csv(index=False)
+        # st.download_button(
+        #     label="Download results as CSV",
+        #     data=csv,
+        #     file_name="top_500_segments.csv",
+        #     mime="text/csv"
+        # )
 
 if __name__ == "__main__":
     main()
