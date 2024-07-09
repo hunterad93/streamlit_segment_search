@@ -1,5 +1,6 @@
 import streamlit as st
 import json
+
 from src.api_clients import send_perplexity_message, send_groq_message, send_openai_message
 from src.audience_processing import process_audience_segments, summarize_segments, extract_and_correct_json
 from src.report_generation import generate_audience_report
@@ -64,11 +65,11 @@ def main():
                 with st.spinner("Processing audience segments..."):
                     processed_results = process_audience_segments(st.session_state.extracted_json, top_k=search_depth)
                     st.session_state.processed_results = processed_results
-            
-            if 'summary_results' not in st.session_state:
-                with st.spinner("Summarizing segments..."):
-                    summary_results = summarize_segments(st.session_state.processed_results)
-                    st.session_state.summary_results = summary_results
+                
+                if 'summary_results' not in st.session_state:
+                    with st.spinner("Summarizing segments..."):
+                        summary_results = summarize_segments(st.session_state.processed_results)
+                        st.session_state.summary_results = summary_results
             
             st.subheader("Actual Segments")
             st.json(st.session_state.summary_results)

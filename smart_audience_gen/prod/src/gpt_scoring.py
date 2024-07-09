@@ -1,6 +1,7 @@
 import re
 from typing import List, Dict
 import concurrent.futures
+from tenacity import retry, stop_after_attempt, wait_exponential
 import pandas as pd
 
 from config import NON_US_LOCATIONS, RERANK_PROMPT, MAX_RERANK_WORKERS, RELEVANCE_THRESHOLD, RERANK_TOP_K, FALLBACK_TOP_K, RERANKER_MODEL
@@ -19,12 +20,29 @@ def filter_non_us(df: pd.DataFrame) -> pd.DataFrame:
     
     return df[df.apply(contains_non_us_location, axis=1)]
 
+
+def parse_relevance_score(result: str) -> float:
+    """
+    Parse the relevance score from the GPT response.
+    Returns a normalized score between 0 and 1.
+    """
+    try:
+        match = re.search(r'\d+(?:\.\d+)?', result)
+        if match:
+            score = float(match.group()) / 10  # Normalize to 0-1 range
+            return max(0, min(score, 1))  # Ensure score is between 0 and 1
+        else:
+            raise ValueError("No number found in response")
+    except ValueError as e:
+        print(f"Error parsing score. Error: {str(e)}")
+        return 0
+
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def gpt_score_relevance(query: str, doc: str) -> float:
     """
     Score the relevance of a document to the query using GPT-3.5.
     Returns a relevance score between 0 and 1.
     """
-
     formatted_rerank_prompt = RERANK_PROMPT.format(
         query=query,
         doc=doc
@@ -36,19 +54,8 @@ def gpt_score_relevance(query: str, doc: str) -> float:
         temperature=0
     )
 
-   
     result = response.choices[0].message.content.strip()
-    try:
-        # Use regex to find the first number in the response
-        match = re.search(r'\d+(?:\.\d+)?', result)
-        if match:
-            score = float(match.group()) / 10  # Normalize to 0-1 range
-            return max(0, min(score, 1))  # Ensure score is between 0 and 1
-        else:
-            raise ValueError("No number found in response")
-    except ValueError as e:
-        print(f"Error parsing score for document: {doc[:50]}... Error: {str(e)}")
-        return 0
+    return parse_relevance_score(result)
 
 def gpt_rerank_results(query: str, docs: List[str], max_workers: int = MAX_RERANK_WORKERS) -> Dict[str, float]:
     """

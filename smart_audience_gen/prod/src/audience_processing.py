@@ -1,5 +1,4 @@
-import json
-import time
+import streamlit as st
 from typing import Dict, List
 import pandas as pd
 import concurrent.futures
@@ -7,6 +6,7 @@ from .data_processing import results_to_dataframe, extract_and_correct_json
 from .embedding import generate_embedding
 from .pinecone_utils import query_pinecone
 from .gpt_scoring import gpt_rerank_results, gpt_score_relevance, filter_non_us, filter_high_relevance_segments
+
 
 def search_and_rank_segments(query: str, presearch_filter: dict = {}, top_k: int = 2) -> pd.DataFrame:
     """Search and rank segments based on the given query."""
@@ -24,7 +24,7 @@ def search_and_rank_segments(query: str, presearch_filter: dict = {}, top_k: int
 
 def process_segment_batch(query: str, batch: List[Dict]) -> List[Dict]:
     """Process a batch of segments concurrently."""
-    with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
         futures = [executor.submit(process_single_segment, query, segment) for segment in batch]
         return [future.result() for future in concurrent.futures.as_completed(futures)]
 
@@ -54,8 +54,8 @@ def find_top_k_high_relevance(query: str, presearch_filter: dict = {}, top_k: in
     high_relevance_segments = []
     high_relevance_found = 0
     
-    for i in range(0, len(df), 10):
-        batch = df.iloc[i:i+10].to_dict('records')
+    for i in range(0, len(df), 100):
+        batch = df.iloc[i:i+100].to_dict('records')
         processed_batch = process_segment_batch(query, batch)
         
         for segment in processed_batch:
@@ -77,6 +77,12 @@ def find_top_k_high_relevance(query: str, presearch_filter: dict = {}, top_k: in
 
 def process_audience_segments(audience_json, presearch_filter={}, top_k=10):
     results = {'Audience': {}}
+    total_items = sum(len(descriptions) for category in ['included', 'excluded'] 
+                      for descriptions in audience_json['Audience'][category].values())
+    
+    progress_bar = st.progress(0)
+    processed_items = 0
+
     for category in ['included', 'excluded']:
         results['Audience'][category] = {}
         for group, descriptions in audience_json['Audience'][category].items():
@@ -90,8 +96,11 @@ def process_audience_segments(audience_json, presearch_filter={}, top_k=10):
                     'description': query,
                     'top_k_segments': relevant_segments
                 })
-                time.sleep(.01)  # Add a 5-second delay between each iteration
+                processed_items += 1
+                progress_bar.progress(processed_items / total_items)
             results['Audience'][category][group] = group_results
+    
+    progress_bar.empty()  # Remove the progress bar when done
     return results
 
 def summarize_segments(processed_results):
