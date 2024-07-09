@@ -3,7 +3,7 @@ import json
 from src.api_clients import send_perplexity_message, send_groq_message
 from src.audience_processing import process_audience_segments, summarize_segments, extract_and_correct_json
 from src.report_generation import generate_audience_report
-from config import AUDIENCE_BUILD_PROMPT, JSON_AUDIENCE_BUILD_PROMPT, INCLUDED_IMPROVING_PROMPT, EXCLUDED_IMPROVING_PROMPT, COMPANY_RESEARCH_PROMPT
+from config import AUDIENCE_BUILD_PROMPT, JSON_AUDIENCE_BUILD_PROMPT, INCLUDED_IMPROVING_PROMPT, EXCLUDED_IMPROVING_PROMPT, COMPANY_RESEARCH_PROMPT, PINECONE_TOP_K
 
 def main():
     st.set_page_config(layout="wide")
@@ -49,7 +49,7 @@ def main():
         st.json(st.session_state.extracted_json)
 
         # Add search depth slider
-        search_depth = st.slider("Select search depth:", min_value=10, max_value=50, value=10, step=10)
+        search_depth = PINECONE_TOP_K
         
         if st.button("Search Actual Segments"):
             # Clear previous results when searching again
