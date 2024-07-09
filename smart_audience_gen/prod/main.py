@@ -67,29 +67,28 @@ def main():
             st.session_state.pop('summary_results', None)
             st.session_state.pop('audience_report', None)
             st.session_state.stage = 3
+            st.experimental_rerun()  # Force a rerun to update the UI
 
-        if st.session_state.stage >= 3:
-            # Process audience segments
+    if st.session_state.stage >= 3:
+        with st.spinner("Processing audience segments..."):
             if 'processed_results' not in st.session_state:
-                with st.spinner("Processing audience segments..."):
-                    processed_results = process_audience_segments(st.session_state.extracted_json, top_k=search_depth)
-                    st.session_state.processed_results = processed_results
-                
-                if 'summary_results' not in st.session_state:
-                    with st.spinner("Summarizing segments..."):
-                        summary_results = summarize_segments(st.session_state.processed_results)
-                        st.session_state.summary_results = summary_results
+                processed_results = process_audience_segments(st.session_state.extracted_json, top_k=search_depth)
+                st.session_state.processed_results = processed_results
             
-            st.subheader("Actual Segments")
-            st.json(st.session_state.summary_results)
-            
-            if 'audience_report' not in st.session_state:
-                with st.spinner("Generating audience report..."):
-                    audience_report = generate_audience_report(st.session_state.summary_results, company_name)
-                    st.session_state.audience_report = audience_report
-            
-            st.subheader("Audience Report")
-            st.markdown(st.session_state.audience_report[0])
+            if 'summary_results' not in st.session_state:
+                summary_results = summarize_segments(st.session_state.processed_results)
+                st.session_state.summary_results = summary_results
+        
+        st.subheader("Actual Segments")
+        st.json(st.session_state.summary_results)
+        
+        if 'audience_report' not in st.session_state:
+            with st.spinner("Generating audience report..."):
+                audience_report = generate_audience_report(st.session_state.summary_results, company_name)
+                st.session_state.audience_report = audience_report
+        
+        st.subheader("Audience Report")
+        st.markdown(st.session_state.audience_report[0])
 
 if __name__ == "__main__":
     main()
