@@ -34,9 +34,16 @@ def main():
     if st.session_state.stage >= 2:
         if 'extracted_json' not in st.session_state:
             with st.spinner("Generating audience..."):
+                st.text("Step 1/4: Planning audience")
                 ai_response, updated_history = send_openai_message(AUDIENCE_BUILD_PROMPT.format(company_name=company_name, company_description=st.session_state.edited_company_description), [])
+                
+                st.text("Step 2/4: Structuring audience as JSON")
                 json_audience_build_response, updated_history = send_openai_message(JSON_AUDIENCE_BUILD_PROMPT, updated_history[:])
+                
+                st.text("Step 3/4: Improving included segments")
                 improving_included_response, updated_history = send_openai_message(INCLUDED_IMPROVING_PROMPT, updated_history[:])
+                
+                st.text("Step 4/4: Improving excluded segments")
                 improving_excluded_response, updated_history = send_openai_message(EXCLUDED_IMPROVING_PROMPT, updated_history[:])
             
             extracted_json = extract_and_correct_json(improving_excluded_response)
