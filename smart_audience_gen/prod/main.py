@@ -1,6 +1,6 @@
 import streamlit as st
 import json
-from src.api_clients import send_perplexity_message, send_groq_message
+from src.api_clients import send_perplexity_message, send_groq_message, send_openai_message
 from src.audience_processing import process_audience_segments, summarize_segments, extract_and_correct_json
 from src.report_generation import generate_audience_report
 from config import AUDIENCE_BUILD_PROMPT, JSON_AUDIENCE_BUILD_PROMPT, INCLUDED_IMPROVING_PROMPT, EXCLUDED_IMPROVING_PROMPT, COMPANY_RESEARCH_PROMPT, PINECONE_TOP_K
@@ -33,10 +33,10 @@ def main():
     if st.session_state.stage >= 2:
         if 'extracted_json' not in st.session_state:
             with st.spinner("Generating audience..."):
-                ai_response, updated_history = send_groq_message(AUDIENCE_BUILD_PROMPT.format(company_name=company_name, company_description=st.session_state.edited_company_description), [])
-                json_audience_build_response, updated_history = send_groq_message(JSON_AUDIENCE_BUILD_PROMPT, updated_history[:])
-                improving_included_response, updated_history = send_groq_message(INCLUDED_IMPROVING_PROMPT, updated_history[:])
-                improving_excluded_response, updated_history = send_groq_message(EXCLUDED_IMPROVING_PROMPT, updated_history[:])
+                ai_response, updated_history = send_openai_message(AUDIENCE_BUILD_PROMPT.format(company_name=company_name, company_description=st.session_state.edited_company_description), [])
+                json_audience_build_response, updated_history = send_openai_message(JSON_AUDIENCE_BUILD_PROMPT, updated_history[:])
+                improving_included_response, updated_history = send_openai_message(INCLUDED_IMPROVING_PROMPT, updated_history[:])
+                improving_excluded_response, updated_history = send_openai_message(EXCLUDED_IMPROVING_PROMPT, updated_history[:])
             
             extracted_json = extract_and_correct_json(improving_excluded_response)
             if extracted_json:
