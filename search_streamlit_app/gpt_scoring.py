@@ -8,17 +8,22 @@ import pandas as pd
 client = OpenAI(api_key=OPENAI_API_KEY)
 
 def filter_non_us(df: pd.DataFrame) -> pd.DataFrame:
+    # Compile the pattern once
+    pattern = re.compile(r'\b(' + '|'.join(map(re.escape, NON_US_LOCATIONS)) + r')\b', re.IGNORECASE)
     
-    def contains_non_us_location(row):
-        concatenated = ' '.join(row.astype(str))
-        for location in NON_US_LOCATIONS:
-            if re.search(r'\b' + re.escape(location) + r'\b', concatenated, re.IGNORECASE):
-                print(f"Filtering out: {concatenated}")
-                print(f"Matched location: {location}")
-                return False
-        return True
+    # Concatenate relevant columns only
+    relevant_columns = ['Segment Name', 'Segment Description', 'Brand Name', 'Segment ID']
+    df['concatenated'] = df[relevant_columns].astype(str).agg(' '.join, axis=1)
     
-    return df[df.apply(contains_non_us_location, axis=1)]
+    # Use vectorized operations
+    mask = ~df['concatenated'].str.contains(pattern, regex=True)
+    
+    # Apply the mask and drop the temporary column
+    filtered_df = df[mask].drop(columns=['concatenated'])
+    
+    print(f"Filtered out {len(df) - len(filtered_df)} non-US locations")
+    
+    return filtered_df
 
 def filter_duplicates(df: pd.DataFrame) -> pd.DataFrame:
     return df.drop_duplicates(subset=['Segment Description', 'Segment Name'], keep='first')
