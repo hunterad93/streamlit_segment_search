@@ -50,7 +50,6 @@ def main():
                 st.text("Step 5/5: Rephrasing segments, adding operators")
                 rephrased_response, updated_history = send_groq_message(REPHRASAL_PROMPT, select_context(updated_history, num_first=2, num_recent=7))
 
-                operator_response, updated_history = send_groq_message(AND_OR_PROMPT, select_context(updated_history, num_first=2, num_recent=7))
 
                 extracted_json = extract_and_correct_json(rephrased_response)
                 if extracted_json:
@@ -58,15 +57,6 @@ def main():
                 else:
                     st.error("Failed to extract valid JSON")
                     return
-                
-                extracted_operator_json = extract_and_correct_json(operator_response)
-                if extracted_operator_json:
-                    st.session_state.extracted_operator_json = extracted_operator_json
-                else:
-                    st.error("Failed to extract valid JSON")
-                    return
-                
-
 
         st.subheader("Generated Hypothetical Audience Segments")
         st.json(st.session_state.extracted_json)
