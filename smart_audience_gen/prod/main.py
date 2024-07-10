@@ -47,7 +47,7 @@ def main():
                 st.text("Step 4/5: Improving excluded segments")
                 improving_excluded_response, updated_history = send_groq_message(EXCLUDED_IMPROVING_PROMPT, select_context(updated_history, num_first=2, num_recent=7))
                 
-                st.text("Step 5/5: Rephrasing segments, adding operators")
+                st.text("Step 5/5: Rephrasing segments")
                 rephrased_response, updated_history = send_groq_message(REPHRASAL_PROMPT, select_context(updated_history, num_first=2, num_recent=7))
 
 
@@ -60,7 +60,6 @@ def main():
 
         st.subheader("Generated Hypothetical Audience Segments")
         st.json(st.session_state.extracted_json)
-        st.json(st.session_state.extracted_operator_json)
         
         if st.button("Search Actual Segments"):
             # Clear previous results when searching again
@@ -73,7 +72,7 @@ def main():
     if st.session_state.stage >= 3:
         with st.spinner("Processing audience segments..."):
             if 'processed_results' not in st.session_state:
-                processed_results = process_audience_segments(st.session_state.extracted_json, top_k=PINECONE_TOP_K)
+                processed_results = process_audience_segments(st.session_state.extracted_json, presearch_filter={}, top_k=PINECONE_TOP_K)
                 st.session_state.processed_results = processed_results
             
             if 'summary_results' not in st.session_state:
