@@ -4,6 +4,8 @@ from config import ONLINE_MODEL, PPLX_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, OPE
 import requests
 from openai import OpenAI
 from groq import Groq
+from tenacity import retry, stop_after_attempt, wait_exponential
+
 
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
 groq_client = Groq(api_key=GROQ_API_KEY)
@@ -46,6 +48,7 @@ def prepare_messages(message, conversation_history, system_prompt):
     messages.append({"role": "user", "content": message})
     return messages
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
 def send_api_message(client, message, conversation_history, model, system_prompt):
     messages = prepare_messages(message, conversation_history, system_prompt)
     
