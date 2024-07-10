@@ -1,7 +1,7 @@
 import streamlit as st
 import json
 
-from src.api_clients import send_perplexity_message, send_openai_message, send_openai_message
+from src.api_clients import send_perplexity_message, send_groq_message, send_openai_message
 from src.audience_processing import process_audience_segments, summarize_segments, extract_and_correct_json
 from src.report_generation import generate_audience_report
 from src.data_processing import extract_included_json, extract_excluded_json, recombine_json, select_context
@@ -36,21 +36,21 @@ def main():
         if 'extracted_json' not in st.session_state:
             with st.spinner("Generating audience..."):
                 st.text("Step 1/5: Planning audience")
-                ai_response, updated_history = send_openai_message(AUDIENCE_BUILD_PROMPT.format(company_name=company_name, company_description=st.session_state.edited_company_description), [])
+                ai_response, updated_history = send_groq_message(AUDIENCE_BUILD_PROMPT.format(company_name=company_name, company_description=st.session_state.edited_company_description), [])
                 
                 st.text("Step 2/5: Structuring audience as JSON")
-                json_audience_build_response, updated_history = send_openai_message(JSON_AUDIENCE_BUILD_PROMPT, select_context(updated_history))
+                json_audience_build_response, updated_history = send_groq_message(JSON_AUDIENCE_BUILD_PROMPT, select_context(updated_history))
                 
                 st.text("Step 3/5: Improving included segments")
-                improving_included_response, updated_history = send_openai_message(INCLUDED_IMPROVING_PROMPT, select_context(updated_history))
+                improving_included_response, updated_history = send_groq_message(INCLUDED_IMPROVING_PROMPT, select_context(updated_history))
                 
                 st.text("Step 4/5: Improving excluded segments")
-                improving_excluded_response, updated_history = send_openai_message(EXCLUDED_IMPROVING_PROMPT, select_context(updated_history))
+                improving_excluded_response, updated_history = send_groq_message(EXCLUDED_IMPROVING_PROMPT, select_context(updated_history))
                 
                 st.text("Step 5/5: Rephrasing segments, adding operators")
-                rephrased_response, updated_history = send_openai_message(REPHRASAL_PROMPT, select_context(updated_history))
+                rephrased_response, updated_history = send_groq_message(REPHRASAL_PROMPT, select_context(updated_history))
 
-                operator_response, updated_history = send_openai_message(AND_OR_PROMPT, select_context(updated_history))
+                operator_response, updated_history = send_groq_message(AND_OR_PROMPT, select_context(updated_history))
 
                 extracted_json = extract_and_correct_json(rephrased_response)
                 if extracted_json:
