@@ -2,6 +2,7 @@ import streamlit as st
 from typing import Dict, List
 import pandas as pd
 import concurrent.futures
+import json
 from .data_processing import results_to_dataframe, extract_and_correct_json
 from .embedding import generate_embedding
 from .pinecone_utils import query_pinecone
@@ -77,6 +78,7 @@ def find_top_k_high_relevance(query: str, presearch_filter: dict = {}, top_k: in
 
 def process_audience_segments(audience_json, presearch_filter={}, top_k=10):
     results = {'Audience': {}}
+    audience_json = json.loads(audience_json)
     total_items = sum(len(descriptions) for category in ['included', 'excluded'] 
                       for descriptions in audience_json['Audience'][category].values())
     
