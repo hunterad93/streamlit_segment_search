@@ -38,13 +38,58 @@ def extract_and_correct_json(text):
     json_string += ']' * (open_brackets - close_brackets)
     
     try:
-        return json.loads(json_string)
+        return json_string
     except json.JSONDecodeError as e:
         print(f"Error parsing JSON: {e}")
         print("JSON string after corrections:")
         print(json_string)
         return None
 
+def extract_included_json(json_string: str) -> str:
+    try:
+        # Parse the JSON string
+        data: Dict[str, Any] = json.loads(json_string)
+        
+        # Extract the "included" object
+        included: Dict[str, Any] = data.get("Audience", {}).get("included", {})
+        
+        # Return the "included" object as a JSON string
+        return json.dumps(included, indent=2)
+    except json.JSONDecodeError:
+        return "Error: Invalid JSON string"
+    except AttributeError:
+        return "Error: Unexpected JSON structure"
+    
+def extract_excluded_json(json_string: str) -> str:
+    try:
+        # Parse the JSON string
+        data: Dict[str, Any] = json.loads(json_string)
+        
+        # Extract the "excluded" object
+        excluded: Dict[str, Any] = data.get("Audience", {}).get("excluded", {})
+        
+        # Return the "excluded" object as a JSON string
+        return json.dumps(excluded, indent=2)
+    except json.JSONDecodeError:
+        return "Error: Invalid JSON string"
+    except AttributeError:
+        return "Error: Unexpected JSON structure"
+    
+def recombine_json(included_json: str, excluded_json: str) -> str:
+    try:
+        included_data: Dict[str, Any] = json.loads(included_json)
+        excluded_data: Dict[str, Any] = json.loads(excluded_json)
+        
+        recombined_data: Dict[str, Any] = {
+            "Audience": {
+                "included": included_data,
+                "excluded": excluded_data
+            }
+        }
+        
+        return json.dumps(recombined_data, indent=2)
+    except json.JSONDecodeError:
+        return "Error: Invalid JSON string in either included or excluded data"
 
 
 def flatten_dict(d, parent_key='', sep='_'):
@@ -93,3 +138,9 @@ def results_to_dataframe(results):
     
     df = pd.DataFrame(data)
     return df
+
+def select_context(history, num_first=2, num_recent=7):
+    if len(history) <= num_first + num_recent:
+        return history
+    print('history length' + str(len(history)))
+    return history[:num_first] + history[-(num_recent):]

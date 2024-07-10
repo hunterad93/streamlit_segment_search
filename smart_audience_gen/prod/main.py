@@ -1,10 +1,11 @@
 import streamlit as st
 import json
 
-from src.api_clients import send_perplexity_message, send_groq_message, send_openai_message
+from src.api_clients import send_perplexity_message, send_openai_message, send_openai_message
 from src.audience_processing import process_audience_segments, summarize_segments, extract_and_correct_json
 from src.report_generation import generate_audience_report
-from config import AUDIENCE_BUILD_PROMPT, JSON_AUDIENCE_BUILD_PROMPT, INCLUDED_IMPROVING_PROMPT, EXCLUDED_IMPROVING_PROMPT, COMPANY_RESEARCH_PROMPT, PINECONE_TOP_K, REPHRASAL_PROMPT
+from src.data_processing import extract_included_json, extract_excluded_json, recombine_json, select_context
+from config import AUDIENCE_BUILD_PROMPT, JSON_AUDIENCE_BUILD_PROMPT, INCLUDED_IMPROVING_PROMPT, EXCLUDED_IMPROVING_PROMPT, COMPANY_RESEARCH_PROMPT, PINECONE_TOP_K, REPHRASAL_PROMPT, AND_OR_PROMPT
 
 def main():
     st.set_page_config(layout="wide")
@@ -38,28 +39,38 @@ def main():
                 ai_response, updated_history = send_openai_message(AUDIENCE_BUILD_PROMPT.format(company_name=company_name, company_description=st.session_state.edited_company_description), [])
                 
                 st.text("Step 2/5: Structuring audience as JSON")
-                json_audience_build_response, updated_history = send_openai_message(JSON_AUDIENCE_BUILD_PROMPT, updated_history[:])
+                json_audience_build_response, updated_history = send_openai_message(JSON_AUDIENCE_BUILD_PROMPT, select_context(updated_history))
                 
                 st.text("Step 3/5: Improving included segments")
-                improving_included_response, updated_history = send_openai_message(INCLUDED_IMPROVING_PROMPT, updated_history[:])
+                improving_included_response, updated_history = send_openai_message(INCLUDED_IMPROVING_PROMPT, select_context(updated_history))
                 
                 st.text("Step 4/5: Improving excluded segments")
-                improving_excluded_response, updated_history = send_openai_message(EXCLUDED_IMPROVING_PROMPT, updated_history[:])
-                st.text("Step 5/5: Rephrasing segments")
-                rephrased_response, updated_history = send_openai_message(REPHRASAL_PROMPT, updated_history[:])
+                improving_excluded_response, updated_history = send_openai_message(EXCLUDED_IMPROVING_PROMPT, select_context(updated_history))
+                
+                st.text("Step 5/5: Rephrasing segments, adding operators")
+                rephrased_response, updated_history = send_openai_message(REPHRASAL_PROMPT, select_context(updated_history))
 
-            extracted_json = extract_and_correct_json(improving_excluded_response)
-            if extracted_json:
-                st.session_state.extracted_json = extracted_json
-            else:
-                st.error("Failed to extract valid JSON")
-                return
+                operator_response, updated_history = send_openai_message(AND_OR_PROMPT, select_context(updated_history))
+
+                extracted_json = extract_and_correct_json(rephrased_response)
+                if extracted_json:
+                    st.session_state.extracted_json = extracted_json
+                else:
+                    st.error("Failed to extract valid JSON")
+                    return
+                
+                extracted_operator_json = extract_and_correct_json(operator_response)
+                if extracted_operator_json:
+                    st.session_state.extracted_operator_json = extracted_operator_json
+                else:
+                    st.error("Failed to extract valid JSON")
+                    return
+                
+
 
         st.subheader("Generated Hypothetical Audience Segments")
         st.json(st.session_state.extracted_json)
-
-        # Add search depth slider
-        search_depth = PINECONE_TOP_K
+        st.json(st.session_state.extracted_operator_json)
         
         if st.button("Search Actual Segments"):
             # Clear previous results when searching again
@@ -67,12 +78,12 @@ def main():
             st.session_state.pop('summary_results', None)
             st.session_state.pop('audience_report', None)
             st.session_state.stage = 3
-            st.experimental_rerun()  # Force a rerun to update the UI
+            st.rerun()  # Force a rerun to update the UI
 
     if st.session_state.stage >= 3:
         with st.spinner("Processing audience segments..."):
             if 'processed_results' not in st.session_state:
-                processed_results = process_audience_segments(st.session_state.extracted_json, top_k=search_depth)
+                processed_results = process_audience_segments(st.session_state.extracted_json, top_k=PINECONE_TOP_K)
                 st.session_state.processed_results = processed_results
             
             if 'summary_results' not in st.session_state:
