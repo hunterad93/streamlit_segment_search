@@ -4,3 +4,4 @@ groq
 pinecone-client
 pandas
 requests
+tenacity
