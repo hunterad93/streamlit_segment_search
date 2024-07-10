@@ -38,6 +38,11 @@ def send_perplexity_message(message, conversation_history, model=ONLINE_MODEL, s
     else:
         return "Error: Unable to get a response from the API"
 
+def select_context(history, num_first, num_recent):
+    if len(history) <= num_first + num_recent:
+        return history
+    print('history length' + str(len(history)))
+    return history[:num_first] + history[-(num_recent):]
 
 def prepare_messages(message, conversation_history, system_prompt):
     messages = conversation_history.copy()

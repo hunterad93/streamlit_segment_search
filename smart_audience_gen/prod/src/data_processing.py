@@ -138,9 +138,3 @@ def results_to_dataframe(results):
     
     df = pd.DataFrame(data)
     return df
-
-def select_context(history, num_first=2, num_recent=7):
-    if len(history) <= num_first + num_recent:
-        return history
-    print('history length' + str(len(history)))
-    return history[:num_first] + history[-(num_recent):]

@@ -3,25 +3,11 @@ from typing import Dict, List
 import pandas as pd
 import concurrent.futures
 import json
-from .data_processing import results_to_dataframe, extract_and_correct_json
+from config import RELEVANCE_THRESHOLD, RERANK_TOP_K, FALLBACK_TOP_K
+from .data_processing import results_to_dataframe
 from .embedding import generate_embedding
 from .pinecone_utils import query_pinecone
-from .gpt_scoring import gpt_rerank_results, gpt_score_relevance, filter_non_us, filter_high_relevance_segments
-
-
-def search_and_rank_segments(query: str, presearch_filter: dict = {}, top_k: int = 2) -> pd.DataFrame:
-    """Search and rank segments based on the given query."""
-    query_embedding = generate_embedding(query)
-    query_results = query_pinecone(query_embedding, top_k, presearch_filter)
-    df = results_to_dataframe(query_results)
-    df = filter_non_us(df)
-    raw_strings = df['raw_string'].tolist()
-    confidence_scores = gpt_rerank_results(query, raw_strings)
-    
-    df['relevance_score'] = df['raw_string'].map(lambda x: confidence_scores.get(x, 0.0))
-    df_sorted = df.sort_values(['relevance_score', 'CPMRateInAdvertiserCurrency_Amount', 'UniqueUserCount'], 
-                               ascending=[False, True, False]).reset_index(drop=True)
-    return df_sorted
+from .segment_processing import gpt_score_relevance, filter_non_us, filter_high_relevance_segments
 
 def process_segment_batch(query: str, batch: List[Dict]) -> List[Dict]:
     """Process a batch of segments concurrently."""
@@ -34,7 +20,7 @@ def process_single_segment(query: str, segment: Dict) -> Dict:
     relevance_score = gpt_score_relevance(query, segment['raw_string'])
     return {**segment, 'relevance_score': relevance_score}
 
-def find_top_k_high_relevance(query: str, presearch_filter: dict = {}, top_k: int = 50, high_relevance_count: int = 1) -> pd.DataFrame:
+def find_top_k_high_relevance(query: str, presearch_filter: dict, top_k: int, high_relevance_count: int) -> pd.DataFrame:
     """
     Search and rank segments based on the given query, processing in batches of 10 using concurrent threads.
     
@@ -42,7 +28,7 @@ def find_top_k_high_relevance(query: str, presearch_filter: dict = {}, top_k: in
         query (str): The search query.
         presearch_filter (dict): Filter to apply before searching.
         top_k (int): Maximum number of results to retrieve from Pinecone.
-        high_relevance_count (int): Number of high-relevance results (score > 0.85) to find before stopping.
+        high_relevance_count (int): Number of high-relevance results (score >= RELEVANCE_THRESHOLD) to find before stopping.
     
     Returns:
         pd.DataFrame: Sorted dataframe of relevant segments.
@@ -61,7 +47,7 @@ def find_top_k_high_relevance(query: str, presearch_filter: dict = {}, top_k: in
         
         for segment in processed_batch:
             high_relevance_segments.append(segment)
-            if segment['relevance_score'] > 0.85:
+            if segment['relevance_score'] >= RELEVANCE_THRESHOLD:
                 high_relevance_found += 1
                 print('found one')
                 if high_relevance_found >= high_relevance_count:
@@ -76,7 +62,7 @@ def find_top_k_high_relevance(query: str, presearch_filter: dict = {}, top_k: in
     return result_df
 
 
-def process_audience_segments(audience_json, presearch_filter={}, top_k=10):
+def process_audience_segments(audience_json, presearch_filter, top_k):
     results = {'Audience': {}}
     audience_json = json.loads(audience_json)
     total_items = sum(len(descriptions) for category in ['included', 'excluded'] 
@@ -93,7 +79,7 @@ def process_audience_segments(audience_json, presearch_filter={}, top_k=10):
                 query = item['description']
                 df = find_top_k_high_relevance(query, top_k=top_k)
                 df = filter_non_us(df)
-                relevant_segments = filter_high_relevance_segments(df, relevance_threshold=0.9, top_k=3, fallback_k=0).to_dict('records')
+                relevant_segments = filter_high_relevance_segments(df, relevance_threshold=RELEVANCE_THRESHOLD, top_k=RERANK_TOP_K, fallback_k=FALLBACK_TOP_K).to_dict('records')
                 group_results.append({
                     'description': query,
                     'top_k_segments': relevant_segments

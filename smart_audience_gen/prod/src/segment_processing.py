@@ -46,7 +46,7 @@ def parse_relevance_score(result: str) -> float:
         print(f"Error parsing score. Error: {str(e)}")
         return 0
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=60))
 def gpt_score_relevance(query: str, doc: str) -> float:
     """
     Score the relevance of a document to the query using GPT-3.5.
@@ -66,29 +66,7 @@ def gpt_score_relevance(query: str, doc: str) -> float:
     result = response.choices[0].message.content.strip()
     return parse_relevance_score(result)
 
-def gpt_rerank_results(query: str, docs: List[str], max_workers: int = MAX_RERANK_WORKERS) -> Dict[str, float]:
-    """
-    Rerank documents by scoring each document's relevance to the query using GPT-3.5.
-    Uses concurrent.futures to parallelize the scoring process.
-    Keeps track of total input tokens.
-    """
-    total_tokens = 0
-
-    def score_doc(doc):
-        nonlocal total_tokens
-        total_tokens += len(query.split()) + len(doc.split())
-        return doc, gpt_score_relevance(query, doc)
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=max_workers) as executor:
-        scores = dict(executor.map(score_doc, docs))
-    
-    # Calculate and print the number *1000000/50
-    token_cost = (total_tokens / 1000000) * 0.5
-    print(f"Estimated rerank cost: ${token_cost:.6f}")
-    
-    return scores
-
-def filter_high_relevance_segments(df: pd.DataFrame, relevance_threshold: float = RELEVANCE_THRESHOLD, top_k: int = RERANK_TOP_K, fallback_k: int = FALLBACK_TOP_K) -> pd.DataFrame:
+def filter_high_relevance_segments(df: pd.DataFrame, relevance_threshold: float, top_k: int, fallback_k: int) -> pd.DataFrame:
     """
     Filter segments with high relevance scores.
     
