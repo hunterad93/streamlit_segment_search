@@ -13,13 +13,14 @@ def search_and_rank_segments(query: str, presearch_filter: dict = {}, top_k: int
     query_results = query_pinecone(query_embedding, top_k, presearch_filter)
     df = results_to_dataframe(query_results)
     df = filter_non_us(df)
+    df = df.sort_values('CPM Rate', ascending=True)
+    df = filter_duplicates(df)
     segment_descriptions = df['Segment Description'].tolist()
     confidence_scores = gpt_rerank_results(query, segment_descriptions)
     
     df['Relevance Score'] = df['Segment Description'].map(lambda x: confidence_scores.get(x, 0.0))
     df_sorted = df.sort_values(['Relevance Score', 'CPM Rate'], 
                                ascending=[False, True]).reset_index(drop=True)
-    df_sorted = filter_duplicates(df_sorted)
     return df_sorted
 
 def create_scatter_plot(data, x_col, y_col, name, hovertemplate):
@@ -133,8 +134,7 @@ def main():
     query = st.text_input("Enter your search query:")
     
     # Add a slider for search depth
-    search_depth = st.slider("Search Depth", min_value=100, max_value=500, value=300, step=100,
-                             help="Adjust the number of top results to retrieve and rank, cost is around 1 cent per 250 depth.")
+    search_depth = 300
 
     search_button = st.button("Search")
 
