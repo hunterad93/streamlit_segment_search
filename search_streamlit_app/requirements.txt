@@ -2,4 +2,3 @@ openai
 pinecone-client
 pandas
 streamlit
-plotly
