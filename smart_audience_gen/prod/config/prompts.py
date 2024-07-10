@@ -51,11 +51,21 @@ JSON_AUDIENCE_BUILD_PROMPT = """Excellent, could you now reformat this into a st
 }
 """
 
-INCLUDED_IMPROVING_PROMPT = """Please improve the included segments to better target the intended customers. The best inclusion strategy will target a set of less specific groups whose overlap matches the target audience. Provide the updated JSON structure with the improved segments."""
+INCLUDED_IMPROVING_PROMPT = """Please improve the included segments to better target the intended customers. The best inclusion strategy will target a set of less specific groups who compose the target audience when combined. Provide the updated JSON structure with the improved segments."""
 
 EXCLUDED_IMPROVING_PROMPT = """Refine the excluded segments for optimal customer targeting. An effective exclusion strategy excludes groups whose intersection represents low-conversion prospects. Avoid describing segments through negation, for example instead of writing 'People who did not show interest in luxury products' write 'Budget shoppers'. Return the updated JSON structure with enhanced exclusion segments."""
 
-REPHRASAL_PROMPT= """Rephrase the following segment descriptions to make them into hypothetical segments that could be found in an online data marketplace. For some segments this means making them less specific, as hyper-sepcific segments are hard to find. Provide the updated JSON structure with the improved segments."""
+REPHRASAL_PROMPT= """Rephrase the following segment descriptions to make them into hypothetical segments that could be found in an online data marketplace. For some segments this means making them less specific, as hyper-specific segments are hard to find. Provide the updated JSON structure with the improved segments."""
+
+AND_OR_PROMPT = """Now that we have a good set of segment descriptions to work with, we need to add AND/OR groupings. Let's do this in the JSON structure by including a JSON level with key = 'operator' and value = 'AND' or 'OR'. Use your best judgment about how to rearrange the targeting strategy under these operators although the outer level should always be OR. Return valid JSON without reasoning."""
+
+INCLUDED_RESTRUCTURE_PROMPT ="""Given this set of audiences we are targeting in our advertising campaign for this company: {company_description}, how should we group them using and/or operators? {included_json}. And operators mean only the segments overlap will be targeted while or operators mean the individual segments are targeted separately. The outer level should always be OR, with inner levels of individual segments or AND groups. Please return valid JSON by maintaining the current JSON structure but adding a new level of JSON nesting where operator is the key and AND/OR is the value."""
+
+EXCLUDED_RESTRUCTURE_PROMPT ="""Given this set of audiences we are excluding in our advertising campaign for this company: {company_description}, how should we group them using and/or operators? {excluded_json}. And operators mean only the segments overlap will be excluded while or operators mean the individual segments are excluded separately. The outer level should always be OR, with inner levels of individual segments or AND groups. Please return valid JSON by maintaining the current JSON structure but adding a new level of JSON nesting where operator is the key and AND/OR is the value."""
+
+EXPANSION_PROMPT = """I have added AND/OR operators to better target my audience. AND operators indicate that only the overlap of segments will be targeted, while OR operators allow for targeting separately. Here is the updated JSON: {audience_with_operators}.
+Please find ways to creatively improve my plan to better target {company_name} customers, you have license to rearrange, remove redundancies, and add new segments. Please return only valid JSON of the same structure without explanations or reasoning.
+"""
 
 ### Search prompts
 
