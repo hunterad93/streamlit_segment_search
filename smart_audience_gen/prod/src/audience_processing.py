@@ -1,66 +1,36 @@
 import streamlit as st
 from typing import Dict, List
 import pandas as pd
-import concurrent.futures
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
-from config import RELEVANCE_THRESHOLD, RERANK_TOP_K, FALLBACK_TOP_K
 from .data_processing import results_to_dataframe
 from .embedding import generate_embedding
 from .pinecone_utils import query_pinecone
-from .segment_processing import gpt_score_relevance, filter_non_us, filter_high_relevance_segments
+from .segment_processing import process_single_segment, filter_non_us
+from config import RELEVANCE_THRESHOLD
 
-def process_segment_batch(query: str, batch: List[Dict]) -> List[Dict]:
-    """Process a batch of segments concurrently."""
-    with concurrent.futures.ThreadPoolExecutor(max_workers=100) as executor:
-        futures = [executor.submit(process_single_segment, query, segment) for segment in batch]
-        return [future.result() for future in concurrent.futures.as_completed(futures)]
-
-def process_single_segment(query: str, segment: Dict) -> Dict:
-    """Process a single segment."""
-    relevance_score = gpt_score_relevance(query, segment['raw_string'])
-    return {**segment, 'relevance_score': relevance_score}
-
-def find_top_k_high_relevance(query: str, presearch_filter: dict, top_k: int, high_relevance_count: int) -> pd.DataFrame:
-    """
-    Search and rank segments based on the given query, processing in batches of 10 using concurrent threads.
-    
-    Args:
-        query (str): The search query.
-        presearch_filter (dict): Filter to apply before searching.
-        top_k (int): Maximum number of results to retrieve from Pinecone.
-        high_relevance_count (int): Number of high-relevance results (score >= RELEVANCE_THRESHOLD) to find before stopping.
-    
-    Returns:
-        pd.DataFrame: Sorted dataframe of relevant segments.
-    """
+def find_first_high_relevance(query: str, presearch_filter: dict, top_k: int) -> pd.DataFrame:
     query_embedding = generate_embedding(query)
     query_results = query_pinecone(query_embedding, top_k, presearch_filter)
     df = results_to_dataframe(query_results)
     df = filter_non_us(df)
-    
-    high_relevance_segments = []
-    high_relevance_found = 0
-    
-    for i in range(0, len(df), 100):
-        batch = df.iloc[i:i+100].to_dict('records')
-        processed_batch = process_segment_batch(query, batch)
-        
-        for segment in processed_batch:
-            high_relevance_segments.append(segment)
-            if segment['relevance_score'] >= RELEVANCE_THRESHOLD:
-                high_relevance_found += 1
-                print('found one')
-                if high_relevance_found >= high_relevance_count:
-                    break
-        
-        if high_relevance_found >= high_relevance_count:
-            break
-    
-    result_df = pd.DataFrame(high_relevance_segments)
-    result_df = result_df.sort_values(['relevance_score', 'CPMRateInAdvertiserCurrency_Amount', 'UniqueUserCount'], 
-                                      ascending=[False, True, False]).reset_index(drop=True)
-    return result_df
+    df = df.sort_values(['vector_score', 'CPMRateInAdvertiserCurrency_Amount', 'UniqueUserCount'], 
+                       ascending=[False, True, False]).reset_index(drop=True)
 
+    segments_searched = 0
+    with ThreadPoolExecutor(max_workers=10) as executor:
+        futures = [executor.submit(process_single_segment, query, segment) for segment in df.to_dict('records')]
+        
+        for future in as_completed(futures):
+            processed_segment = future.result()
+            segments_searched += 1
+            if processed_segment['relevance_score'] >= RELEVANCE_THRESHOLD:
+                executor.shutdown(wait=False, cancel_futures=True)
+                print(f"Found high-relevance segment after searching {segments_searched} segments")
+                return pd.DataFrame([processed_segment])
+    
+    print(f"No high-relevance segment found after searching {segments_searched} segments")
+    return pd.DataFrame()  # Return empty DataFrame if no high-relevance segment found
 
 def process_audience_segments(audience_json, presearch_filter, top_k):
     results = {'Audience': {}}
@@ -77,12 +47,10 @@ def process_audience_segments(audience_json, presearch_filter, top_k):
             group_results = []
             for item in descriptions:
                 query = item['description']
-                df = find_top_k_high_relevance(query, top_k=top_k)
-                df = filter_non_us(df)
-                relevant_segments = filter_high_relevance_segments(df, relevance_threshold=RELEVANCE_THRESHOLD, top_k=RERANK_TOP_K, fallback_k=FALLBACK_TOP_K).to_dict('records')
+                relevant_segment = find_first_high_relevance(query, presearch_filter, top_k)
                 group_results.append({
                     'description': query,
-                    'top_k_segments': relevant_segments
+                    'top_k_segments': relevant_segment.to_dict('records') if not relevant_segment.empty else []
                 })
                 processed_items += 1
                 progress_bar.progress(processed_items / total_items)

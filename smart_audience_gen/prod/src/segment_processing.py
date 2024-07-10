@@ -4,7 +4,7 @@ import concurrent.futures
 from tenacity import retry, stop_after_attempt, wait_exponential
 import pandas as pd
 
-from config import NON_US_LOCATIONS, RERANK_PROMPT, MAX_RERANK_WORKERS, RELEVANCE_THRESHOLD, RERANK_TOP_K, FALLBACK_TOP_K, RERANKER_MODEL
+from config import NON_US_LOCATIONS, RERANK_PROMPT, RERANKER_MODEL
 from .api_clients import openai_client
 
 def filter_non_us(df: pd.DataFrame) -> pd.DataFrame:
@@ -66,26 +66,7 @@ def gpt_score_relevance(query: str, doc: str) -> float:
     result = response.choices[0].message.content.strip()
     return parse_relevance_score(result)
 
-def filter_high_relevance_segments(df: pd.DataFrame, relevance_threshold: float, top_k: int, fallback_k: int) -> pd.DataFrame:
-    """
-    Filter segments with high relevance scores.
-    
-    Args:
-        df (pd.DataFrame): Input DataFrame containing segments.
-        relevance_threshold (float): Minimum relevance score to consider a segment as highly relevant.
-        top_k (int): Number of top segments to return if there are highly relevant segments.
-        fallback_k (int): Number of top segments to return if there are no highly relevant segments.
-
-    Returns:
-        pd.DataFrame: The top 'top_k' segments with a relevance score of 'relevance_threshold' or higher,
-        or the top 'fallback_k' segment(s) if none meet that threshold.
-        Returns an empty DataFrame if fallback_k is 0 and no segments meet the relevance threshold.
-    """
-    high_relevance = df[df['relevance_score'] >= relevance_threshold]
-    
-    if not high_relevance.empty:
-        return high_relevance.head(top_k)
-    elif fallback_k > 0:
-        return df.head(fallback_k)
-    else:
-        return pd.DataFrame()  # Return an empty DataFrame if fallback_k is 0
+def process_single_segment(query: str, segment: Dict) -> Dict:
+    """Process a single segment."""
+    relevance_score = gpt_score_relevance(query, segment['raw_string'])
+    return {**segment, 'relevance_score': relevance_score}
