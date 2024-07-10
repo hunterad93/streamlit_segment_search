@@ -50,7 +50,7 @@ def main():
     st.set_page_config(layout="wide")
     st.title("3rd Party Data Segment Search")
     st.subheader("Describe the audience segment you are looking for in a few words.")
-    st.subheader("Note: 'Segment Score' takes into account both segment cost and relevance score to desired segment, green/red colors are determined by this score.")
+    st.subheader("Note: 'Segment Score' takes into account both segment cost and relevance score to desired segment, green/red shades are determined by this score.")
 
     query = st.text_input("Enter your search query:")
     
@@ -73,7 +73,7 @@ def main():
 
         # Calculate the segment score and add it as a visible column
         results['Segment Score'] = (results['Relevance Score'] * 10) / results['CPM Rate']
-        results['Segment Score'] = results['Segment Score'].apply(lambda x: f'{x:.3f}')
+        results['Segment Score'] = results['Segment Score'].round(3)
 
         # Define essential columns
         essential_columns = [
@@ -82,9 +82,10 @@ def main():
             'Segment Description',
             'Segment Score',
             'Relevance Score',
-            'Unique User Count',
             'CPM Rate',
+            'Unique User Count',
             'Segment ID'
+ 
         ]
     
         # Ensure all essential columns exist in df
