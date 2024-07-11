@@ -7,7 +7,7 @@ from .data_processing import results_to_dataframe
 from .embedding import generate_embedding
 from .pinecone_utils import query_pinecone
 from .segment_processing import process_single_segment, filter_non_us
-from config import RELEVANCE_THRESHOLD
+from config.settings import RELEVANCE_THRESHOLD
 
 def find_first_high_relevance(query: str, presearch_filter: dict, top_k: int) -> pd.DataFrame:
     query_embedding = generate_embedding(query)

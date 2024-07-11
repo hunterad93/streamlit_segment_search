@@ -1,4 +1,4 @@
-from config import EMBEDDING_MODEL
+from config.settings import EMBEDDING_MODEL
 from .api_clients import openai_client
 
 def generate_embedding(text: str) -> list[float]:

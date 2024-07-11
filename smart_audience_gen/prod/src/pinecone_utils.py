@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from config import PINECONE_API_KEY, PINECONE_INDEX_NAME, PINECONE_TOP_K
+from config.settings import PINECONE_API_KEY, PINECONE_INDEX_NAME, PINECONE_TOP_K
 from pinecone import Pinecone
 
 pc = Pinecone(api_key=PINECONE_API_KEY)

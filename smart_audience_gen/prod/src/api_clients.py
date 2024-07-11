@@ -1,6 +1,7 @@
 import os
 from typing import List, Tuple
-from config import ONLINE_MODEL, PPLX_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, OPENAI_MODEL, GROQ_MODEL, BASIC_SYSTEM_PROMPT
+from config.settings import ONLINE_MODEL, PPLX_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, OPENAI_MODEL, GROQ_MODEL
+from config.prompts import BASIC_SYSTEM_PROMPT
 import requests
 from openai import OpenAI
 from groq import Groq

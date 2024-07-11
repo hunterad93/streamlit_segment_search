@@ -5,7 +5,23 @@ from src.api_clients import send_perplexity_message, send_groq_message, send_ope
 from src.audience_processing import process_audience_segments, summarize_segments
 from src.data_processing import extract_and_correct_json
 from src.report_generation import generate_audience_report
-from config import AUDIENCE_BUILD_PROMPT, JSON_AUDIENCE_BUILD_PROMPT, INCLUDED_IMPROVING_PROMPT, EXCLUDED_IMPROVING_PROMPT, COMPANY_RESEARCH_PROMPT, PINECONE_TOP_K, REPHRASAL_PROMPT, AND_OR_PROMPT
+from config.prompts import (COMPANY_RESEARCH_PROMPT, AUDIENCE_BUILD_PROMPT, JSON_AUDIENCE_BUILD_PROMPT, INCLUDED_IMPROVING_PROMPT, EXCLUDED_IMPROVING_PROMPT, REPHRASAL_PROMPT)
+from config.settings import PINECONE_TOP_K
+
+def process_message_queue(message_queue, initial_history=None):
+    history = initial_history or []
+    results = {}
+    
+    for step, (prompt_name, prompt, format_args) in enumerate(message_queue, 1):
+        st.text(f"Step {step}/{len(message_queue)}: {prompt_name}")
+        formatted_prompt = prompt.format(**format_args) if format_args else prompt
+        response, history = send_groq_message(formatted_prompt, select_context(history, num_first=2, num_recent=7))
+        st.write(response)
+        results[prompt_name] = response
+    
+    return results, history
+
+
 
 def main():
     st.set_page_config(layout="wide")
@@ -33,25 +49,20 @@ def main():
             st.session_state.pop('audience_report', None)
 
     if st.session_state.stage >= 2:
+        message_queue = [
+            ("Planning audience", AUDIENCE_BUILD_PROMPT, {"company_name": company_name, "company_description": st.session_state.edited_company_description}),
+            ("Structuring audience as JSON", JSON_AUDIENCE_BUILD_PROMPT, None),
+            ("Improving included segments", INCLUDED_IMPROVING_PROMPT, None),
+            ("Improving excluded segments", EXCLUDED_IMPROVING_PROMPT, None),
+            ("Rephrasing segments", REPHRASAL_PROMPT, {"company_name": company_name})
+        ]
+
         if 'extracted_json' not in st.session_state:
             with st.spinner("Generating audience..."):
-                st.text("Step 1/5: Planning audience")
-                ai_response, updated_history = send_groq_message(AUDIENCE_BUILD_PROMPT.format(company_name=company_name, company_description=st.session_state.edited_company_description), [])
-                
-                st.text("Step 2/5: Structuring audience as JSON")
-                json_audience_build_response, updated_history = send_groq_message(JSON_AUDIENCE_BUILD_PROMPT, select_context(updated_history, num_first=2, num_recent=7))
-                
-                st.text("Step 3/5: Improving included segments")
-                improving_included_response, updated_history = send_groq_message(INCLUDED_IMPROVING_PROMPT, select_context(updated_history, num_first=2, num_recent=7))
-                
-                st.text("Step 4/5: Improving excluded segments")
-                improving_excluded_response, updated_history = send_groq_message(EXCLUDED_IMPROVING_PROMPT, select_context(updated_history, num_first=2, num_recent=7))
-                
-                st.text("Step 5/5: Rephrasing segments")
-                rephrased_response, updated_history = send_groq_message(REPHRASAL_PROMPT, select_context(updated_history, num_first=2, num_recent=7))
-
-
-                extracted_json = extract_and_correct_json(rephrased_response)
+                results, _ = process_message_queue(message_queue)
+            
+                last_key = list(results.keys())[-1]
+                extracted_json = extract_and_correct_json(results[last_key])
                 if extracted_json:
                     st.session_state.extracted_json = extracted_json
                 else:

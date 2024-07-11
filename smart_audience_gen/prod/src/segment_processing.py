@@ -4,7 +4,10 @@ import concurrent.futures
 from tenacity import retry, stop_after_attempt, wait_exponential
 import pandas as pd
 
-from config import NON_US_LOCATIONS, RERANK_PROMPT, RERANKER_MODEL
+from config.locations import NON_US_LOCATIONS
+from config.prompts import RERANK_PROMPT
+from config.settings import RERANKER_MODEL
+
 from .api_clients import openai_client
 
 def filter_non_us(df: pd.DataFrame) -> pd.DataFrame:
