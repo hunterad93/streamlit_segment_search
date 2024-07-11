@@ -7,6 +7,12 @@ COMPANY_RESEARCH_PROMPT = "Describe the company {company_name}, focusing on thei
 AUDIENCE_BUILD_PROMPT = """
 I am setting up an advertising campaign for {company_name} which is described as {company_description}. When I set up my audiences, which audience segments should I exclude and which should I include? Let's focus on behavioral and demographic targeting. Describe a list of audience segments to include and exclude. Make sure to include basic obvious segments that could easily be taken for granted, as well as more nuanced and specific behavioral segments. Don't include the reasoning for why you chose the segments in your response, just the segments. Each segment should be a distinct audience that would be possible to target.
 """
+DEMOGRAPHIC_AUDIENCE_BUILD_PROMPT = """
+I am setting up an advertising campaign for {company_name} which is described as {company_description}. When I set up my audiences, which audience segments should I exclude and which should I include? Let's focus on just demographic targeting, we will do behavioral and geographic later. Focus on gender, age, income, family status, education, and occupation if relevant. Describe a list of audience segments to include and exclude. Don't include the reasoning for why you chose the segments in your response, just the segments. Each segment should be a distinct demographics-based audience that would be possible to target.
+"""
+BEHAVIORAL_AUDIENCE_BUILD_PROMPT = """
+I am setting up an advertising campaign for {company_name} which is described as {company_description}. When I set up my audiences, which audience segments should I exclude and which should I include? Let's focus on behavioral targeting only we will do demographic and geographic later. Describe a list of audience segments to include and exclude, thinking broadly about the behaviors of audiences likely and unlikely to convert. Make sure to include basic obvious segments that could easily be taken for granted, as well as more nuanced and specific segments. Don't include the reasoning for why you chose the segments in your response, just the segments. Each segment should be a distinct audience that would be possible to target.
+"""
 
 JSON_AUDIENCE_BUILD_PROMPT = """Excellent, could you now reformat this into a structured JSON output, in this form:
 {
@@ -53,18 +59,16 @@ JSON_AUDIENCE_BUILD_PROMPT = """Excellent, could you now reformat this into a st
 
 INCLUDED_IMPROVING_PROMPT = """Please improve the included segments to better target the intended customers. The best inclusion strategy will target a set of less specific groups who compose the target audience when combined. Provide the updated JSON structure with the improved segments."""
 
-EXCLUDED_IMPROVING_PROMPT = """Refine the excluded segments for optimal customer targeting. An effective exclusion strategy excludes groups whose intersection represents low-conversion prospects. Avoid describing segments through negation, for example instead of writing 'People who did not show interest in luxury products' write 'Budget shoppers'. Return the updated JSON structure with enhanced exclusion segments."""
+DEMOGRAPHIC_INCLUDED_IMPROVING_PROMPT = """Please improve the included segments to better target the intended customers. Provide the updated JSON structure with the improved segments."""
 
-REPHRASAL_PROMPT= """Rephrase the following segment descriptions to make them into hypothetical segments that could be found in an online data marketplace. For some segments this means making them less specific, as hyper-specific segments are hard to find. Provide the updated JSON structure with the improved segments."""
+EXCLUDED_IMPROVING_PROMPT = """Refine the excluded segments for optimal customer targeting. An effective exclusion strategy excludes less specific groups who compose a set of low-conversion prospects when combined. Avoid describing segments through negation, for example instead of writing 'people who do not value quality' write 'budget shoppers'. Return the updated JSON structure with enhanced exclusion segments."""
 
-AND_OR_PROMPT = """Now that we have a good set of segment descriptions to work with, we need to add AND/OR groupings. Let's do this in the JSON structure by including a JSON level with key = 'operator' and value = 'AND' or 'OR'. Use your best judgment about how to rearrange the targeting strategy under these operators although the outer level should always be OR. Return valid JSON without reasoning."""
+REPHRASAL_PROMPT= """Rephrase the following segment descriptions to make them into hypothetical segments that could be found in an online data marketplace. For some segments this means making them less specific, as hyper-specific segments are unlikely to exist. Provide the updated JSON structure with the improved segments."""
 
-INCLUDED_RESTRUCTURE_PROMPT ="""Given this set of audiences we are targeting in our advertising campaign for this company: {company_description}, how should we group them using and/or operators? {included_json}. And operators mean only the segments overlap will be targeted while or operators mean the individual segments are targeted separately. The outer level should always be OR, with inner levels of individual segments or AND groups. Please return valid JSON by maintaining the current JSON structure but adding a new level of JSON nesting where operator is the key and AND/OR is the value."""
+BROADNESS_RATING_PROMPT = """
+Please rate the following advertising audience segment description on a scale of 0 to 10. 0 indicates a segment that is not specific and has high reach. 10 indicates a segment that is very specific and has low reach.
 
-EXCLUDED_RESTRUCTURE_PROMPT ="""Given this set of audiences we are excluding in our advertising campaign for this company: {company_description}, how should we group them using and/or operators? {excluded_json}. And operators mean only the segments overlap will be excluded while or operators mean the individual segments are excluded separately. The outer level should always be OR, with inner levels of individual segments or AND groups. Please return valid JSON by maintaining the current JSON structure but adding a new level of JSON nesting where operator is the key and AND/OR is the value."""
-
-EXPANSION_PROMPT = """I have added AND/OR operators to better target my audience. AND operators indicate that only the overlap of segments will be targeted, while OR operators allow for targeting separately. Here is the updated JSON: {audience_with_operators}.
-Please find ways to creatively improve my plan to better target {company_name} customers, you have license to rearrange, remove redundancies, and add new segments. Please return only valid JSON of the same structure without explanations or reasoning.
+Segment description: "{segment_description}"
 """
 
 ### Search prompts
@@ -114,4 +118,14 @@ Please summarize the audience targeting strategy in our {company_name} campaign,
 explaining who is being included and who is being excluded from the audience.
 """
 
+### Deprecated prompts
 
+AND_OR_PROMPT = """Now that we have a good set of segment descriptions to work with, we need to add AND/OR groupings. Let's do this in the JSON structure by including a JSON level with key = 'operator' and value = 'AND' or 'OR'. Use your best judgment about how to rearrange the targeting strategy under these operators although the outer level should always be OR. Return valid JSON without reasoning."""
+
+INCLUDED_RESTRUCTURE_PROMPT ="""Given this set of audiences we are targeting in our advertising campaign for this company: {company_description}, how should we group them using and/or operators? {included_json}. And operators mean only the segments overlap will be targeted while or operators mean the individual segments are targeted separately. The outer level should always be OR, with inner levels of individual segments or AND groups. Please return valid JSON by maintaining the current JSON structure but adding a new level of JSON nesting where operator is the key and AND/OR is the value."""
+
+EXCLUDED_RESTRUCTURE_PROMPT ="""Given this set of audiences we are excluding in our advertising campaign for this company: {company_description}, how should we group them using and/or operators? {excluded_json}. And operators mean only the segments overlap will be excluded while or operators mean the individual segments are excluded separately. The outer level should always be OR, with inner levels of individual segments or AND groups. Please return valid JSON by maintaining the current JSON structure but adding a new level of JSON nesting where operator is the key and AND/OR is the value."""
+
+EXPANSION_PROMPT = """I have added AND/OR operators to better target my audience. AND operators indicate that only the overlap of segments will be targeted, while OR operators allow for targeting separately. Here is the updated JSON: {audience_with_operators}.
+Please find ways to creatively improve my plan to better target {company_name} customers, you have license to rearrange, remove redundancies, and add new segments. Please return only valid JSON of the same structure without explanations or reasoning.
+"""

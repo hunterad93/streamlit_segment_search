@@ -38,58 +38,38 @@ def extract_and_correct_json(text):
     json_string += ']' * (open_brackets - close_brackets)
     
     try:
-        return json_string
+        return json.loads(json_string)
     except json.JSONDecodeError as e:
         print(f"Error parsing JSON: {e}")
         print("JSON string after corrections:")
         print(json_string)
         return None
 
-def extract_included_json(json_string: str) -> str:
-    try:
-        # Parse the JSON string
-        data: Dict[str, Any] = json.loads(json_string)
-        
-        # Extract the "included" object
-        included: Dict[str, Any] = data.get("Audience", {}).get("included", {})
-        
-        # Return the "included" object as a JSON string
-        return json.dumps(included, indent=2)
-    except json.JSONDecodeError:
-        return "Error: Invalid JSON string"
-    except AttributeError:
-        return "Error: Unexpected JSON structure"
-    
-def extract_excluded_json(json_string: str) -> str:
-    try:
-        # Parse the JSON string
-        data: Dict[str, Any] = json.loads(json_string)
-        
-        # Extract the "excluded" object
-        excluded: Dict[str, Any] = data.get("Audience", {}).get("excluded", {})
-        
-        # Return the "excluded" object as a JSON string
-        return json.dumps(excluded, indent=2)
-    except json.JSONDecodeError:
-        return "Error: Invalid JSON string"
-    except AttributeError:
-        return "Error: Unexpected JSON structure"
-    
-def recombine_json(included_json: str, excluded_json: str) -> str:
-    try:
-        included_data: Dict[str, Any] = json.loads(included_json)
-        excluded_data: Dict[str, Any] = json.loads(excluded_json)
-        
-        recombined_data: Dict[str, Any] = {
-            "Audience": {
-                "included": included_data,
-                "excluded": excluded_data
-            }
-        }
-        
-        return json.dumps(recombined_data, indent=2)
-    except json.JSONDecodeError:
-        return "Error: Invalid JSON string in either included or excluded data"
+def extract_segment_descriptions(combined_json):
+    descriptions = []
+    for audience_type in ['demographic', 'behavioral']:
+        if audience_type in combined_json and 'Audience' in combined_json[audience_type]:
+            for include_exclude in ['included', 'excluded']:
+                if include_exclude in combined_json[audience_type]['Audience']:
+                    for segment_group in combined_json[audience_type]['Audience'][include_exclude].values():
+                        for segment in segment_group:
+                            if 'description' in segment:
+                                descriptions.append(segment['description'])
+    return descriptions
+
+def add_broadness_scores_to_json(combined_json, broadness_scores):
+    score_index = 0
+    for audience_type in ['demographic', 'behavioral']:
+        if audience_type in combined_json and 'Audience' in combined_json[audience_type]:
+            for include_exclude in ['included', 'excluded']:
+                if include_exclude in combined_json[audience_type]['Audience']:
+                    for segment_group in combined_json[audience_type]['Audience'][include_exclude].values():
+                        for segment in segment_group:
+                            if 'description' in segment:
+                                segment['broadness_score'] = broadness_scores[score_index]
+                                score_index += 1
+    return json.dumps(combined_json)
+
 
 
 def flatten_dict(d, parent_key='', sep='_'):

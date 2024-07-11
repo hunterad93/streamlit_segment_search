@@ -4,7 +4,7 @@ import concurrent.futures
 from tenacity import retry, stop_after_attempt, wait_exponential
 import pandas as pd
 
-from config import NON_US_LOCATIONS, RERANK_PROMPT, RERANKER_MODEL
+from config import NON_US_LOCATIONS, RERANK_PROMPT, RERANKER_MODEL, BROADNESS_RATING_PROMPT
 from .api_clients import openai_client
 
 def filter_non_us(df: pd.DataFrame) -> pd.DataFrame:
@@ -30,7 +30,7 @@ def filter_non_us(df: pd.DataFrame) -> pd.DataFrame:
     return filtered_df
 
 
-def parse_relevance_score(result: str) -> float:
+def parse_score(result: str) -> float:
     """
     Parse the relevance score from the GPT response.
     Returns a normalized score between 0 and 1.
@@ -64,9 +64,31 @@ def gpt_score_relevance(query: str, doc: str) -> float:
     )
 
     result = response.choices[0].message.content.strip()
-    return parse_relevance_score(result)
+    return parse_score(result)
+
+def gpt_score_broadness(segment_description: str) -> float:
+    """
+    Score the broadness of a segment description using GPT-3.5.
+    Returns a broadness score between 0 and 10.
+    """
+    formatted_broadness_prompt = BROADNESS_RATING_PROMPT.format(
+        segment_description=segment_description
+    )
+    response = openai_client.chat.completions.create(
+        model=RERANKER_MODEL,
+        messages=[{"role": "user", "content": formatted_broadness_prompt}],
+        max_tokens=100,
+        temperature=0
+    )
+
+    result = response.choices[0].message.content.strip()
+    return parse_score(result)
 
 def process_single_segment(query: str, segment: Dict) -> Dict:
     """Process a single segment."""
     relevance_score = gpt_score_relevance(query, segment['raw_string'])
     return {**segment, 'relevance_score': relevance_score}
+
+def rate_broadness_single_segment(segment_description: str) -> float:
+    """Rate the broadness of a single segment description."""
+    return gpt_score_broadness(segment_description)
