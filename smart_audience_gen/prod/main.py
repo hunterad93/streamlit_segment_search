@@ -1,11 +1,25 @@
 import streamlit as st
-import json
+from src.ui_components import (
+    render_company_input,
+    render_company_description,
+    render_json_output,
+    render_actual_segments,
+    render_audience_report,
+    render_button
+)
 
-from src.api_clients import send_perplexity_message, send_groq_message, send_openai_message, select_context
+from src.api_clients import send_perplexity_message, send_groq_message, select_context
 from src.audience_processing import process_audience_segments, summarize_segments
 from src.data_processing import extract_and_correct_json
 from src.report_generation import generate_audience_report
-from config.prompts import (COMPANY_RESEARCH_PROMPT, AUDIENCE_BUILD_PROMPT, JSON_AUDIENCE_BUILD_PROMPT, INCLUDED_IMPROVING_PROMPT, EXCLUDED_IMPROVING_PROMPT, REPHRASAL_PROMPT)
+from config.prompts import (
+    COMPANY_RESEARCH_PROMPT,
+    AUDIENCE_BUILD_PROMPT,
+    JSON_AUDIENCE_BUILD_PROMPT,
+    INCLUDED_IMPROVING_PROMPT,
+    EXCLUDED_IMPROVING_PROMPT,
+    REPHRASAL_PROMPT
+)
 from config.settings import PINECONE_TOP_K
 
 def process_message_queue(message_queue, initial_history=None):
@@ -16,90 +30,86 @@ def process_message_queue(message_queue, initial_history=None):
         st.text(f"Step {step}/{len(message_queue)}: {prompt_name}")
         formatted_prompt = prompt.format(**format_args) if format_args else prompt
         response, history = send_groq_message(formatted_prompt, select_context(history, num_first=2, num_recent=7))
-        st.write(response)
         results[prompt_name] = response
     
     return results, history
 
+def generate_company_description(company_name):
+    return send_perplexity_message(COMPANY_RESEARCH_PROMPT.format(company_name=company_name), [])
 
+def generate_audience(company_name, company_description):
+    message_queue = [
+        ("Planning audience", AUDIENCE_BUILD_PROMPT, {"company_name": company_name, "company_description": company_description}),
+        ("Structuring audience as JSON", JSON_AUDIENCE_BUILD_PROMPT, None),
+        ("Improving included segments", INCLUDED_IMPROVING_PROMPT, None),
+        ("Improving excluded segments", EXCLUDED_IMPROVING_PROMPT, None),
+        ("Rephrasing segments", REPHRASAL_PROMPT, {"company_name": company_name})
+    ]
+
+    results, _ = process_message_queue(message_queue)
+    last_key = list(results.keys())[-1]
+    return extract_and_correct_json(results[last_key])
+
+def process_audience_data(extracted_json):
+    processed_results = process_audience_segments(extracted_json, presearch_filter={}, top_k=PINECONE_TOP_K)
+    summary_results = summarize_segments(processed_results)
+    return summary_results
 
 def main():
     st.set_page_config(layout="wide")
     st.title("Smart Audience Generator")
 
-    company_name = st.text_input("Enter company name:", "Bubba Burgers")
+    company_name = render_company_input()
 
     if 'stage' not in st.session_state:
         st.session_state.stage = 0
 
-    if st.session_state.stage == 0 and st.button("Generate Company Description"):
-        company_description = send_perplexity_message(COMPANY_RESEARCH_PROMPT.format(company_name=company_name), [])
-        st.session_state.company_description = company_description
-        st.session_state.stage = 1
+    if st.session_state.stage == 0:
+        if render_button("Generate Company Description"):
+            st.session_state.company_description = generate_company_description(company_name)
+            st.session_state.stage = 1
 
     if st.session_state.stage >= 1:
-        edited_company_description = st.text_area("Edit company description:", st.session_state.company_description, height=300)
-        if st.button("Generate Audience"):
+        edited_company_description = render_company_description(st.session_state.company_description)
+        if render_button("Generate Audience"):
             st.session_state.edited_company_description = edited_company_description
             st.session_state.stage = 2
-            # Clear previous results when regenerating
             st.session_state.pop('extracted_json', None)
             st.session_state.pop('processed_results', None)
             st.session_state.pop('summary_results', None)
             st.session_state.pop('audience_report', None)
 
     if st.session_state.stage >= 2:
-        message_queue = [
-            ("Planning audience", AUDIENCE_BUILD_PROMPT, {"company_name": company_name, "company_description": st.session_state.edited_company_description}),
-            ("Structuring audience as JSON", JSON_AUDIENCE_BUILD_PROMPT, None),
-            ("Improving included segments", INCLUDED_IMPROVING_PROMPT, None),
-            ("Improving excluded segments", EXCLUDED_IMPROVING_PROMPT, None),
-            ("Rephrasing segments", REPHRASAL_PROMPT, {"company_name": company_name})
-        ]
-
         if 'extracted_json' not in st.session_state:
             with st.spinner("Generating audience..."):
-                results, _ = process_message_queue(message_queue)
-            
-                last_key = list(results.keys())[-1]
-                extracted_json = extract_and_correct_json(results[last_key])
+                extracted_json = generate_audience(company_name, st.session_state.edited_company_description)
                 if extracted_json:
                     st.session_state.extracted_json = extracted_json
                 else:
                     st.error("Failed to extract valid JSON")
                     return
 
-        st.subheader("Generated Hypothetical Audience Segments")
-        st.json(st.session_state.extracted_json)
+        render_json_output(st.session_state.extracted_json)
         
-        if st.button("Search Actual Segments"):
-            # Clear previous results when searching again
+        if render_button("Search Actual Segments"):
             st.session_state.pop('processed_results', None)
             st.session_state.pop('summary_results', None)
             st.session_state.pop('audience_report', None)
             st.session_state.stage = 3
-            st.rerun()  # Force a rerun to update the UI
+            st.rerun()
 
     if st.session_state.stage >= 3:
         with st.spinner("Processing audience segments..."):
-            if 'processed_results' not in st.session_state:
-                processed_results = process_audience_segments(st.session_state.extracted_json, presearch_filter={}, top_k=PINECONE_TOP_K)
-                st.session_state.processed_results = processed_results
-            
             if 'summary_results' not in st.session_state:
-                summary_results = summarize_segments(st.session_state.processed_results)
-                st.session_state.summary_results = summary_results
+                st.session_state.summary_results = process_audience_data(st.session_state.extracted_json)
         
-        st.subheader("Actual Segments")
-        st.json(st.session_state.summary_results)
+        render_actual_segments(st.session_state.summary_results)
         
         if 'audience_report' not in st.session_state:
             with st.spinner("Generating audience report..."):
-                audience_report = generate_audience_report(st.session_state.summary_results, company_name)
-                st.session_state.audience_report = audience_report
+                st.session_state.audience_report = generate_audience_report(st.session_state.summary_results, company_name)
         
-        st.subheader("Audience Report")
-        st.markdown(st.session_state.audience_report[0])
+        render_audience_report(st.session_state.audience_report)
 
 if __name__ == "__main__":
     main()
