@@ -1,4 +1,4 @@
-from src.api_clients import send_groq_message
+from src.api_clients import route_api_call
 from config.prompts import REPORT_PROMPT, REPORT_SYSTEM_PROMPT
 import streamlit as st
 
@@ -15,7 +15,7 @@ def generate_audience_report(summary_json, company_name, conversation_history):
     conversation_history.append({"role": "user", "content": formatted_report_prompt})
 
     # Send the message to the LLM
-    audience_report = send_groq_message(conversation_history)
+    audience_report = route_api_call(conversation_history)
 
     # Add the LLM's response to the conversation history
     conversation_history.append({"role": "assistant", "content": audience_report})

@@ -5,6 +5,7 @@ class State:
         self.stage = 0
         self.company_name = ""
         self.extracted_audience_json = None
+        self.old_audience_json = None
         self.conversation_history = []
         self.user_comment = ""
         self.summary_results = None

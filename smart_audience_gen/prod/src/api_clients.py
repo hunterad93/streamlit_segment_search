@@ -2,11 +2,20 @@ import requests
 from openai import OpenAI
 from groq import Groq
 from tenacity import retry, stop_after_attempt, wait_exponential
-from config.settings import ONLINE_MODEL, PPLX_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, OPENAI_MODEL, GROQ_MODEL, CONTEXT_LENGTH_START, CONTEXT_LENGTH_END
+from config.settings import ONLINE_MODEL, PPLX_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, OPENAI_MODEL, GROQ_MODEL, CONTEXT_LENGTH_START, CONTEXT_LENGTH_END, API_SELECTOR
 from config.prompts import BASIC_SYSTEM_PROMPT
+
+
 
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
 groq_client = Groq(api_key=GROQ_API_KEY)
+
+if API_SELECTOR == 'openai':
+    client = openai_client
+    model = OPENAI_MODEL
+elif API_SELECTOR == 'groq':
+    client = groq_client
+    model = GROQ_MODEL
 
 def send_perplexity_message(messages, model=ONLINE_MODEL):
     url = "https://api.perplexity.ai/chat/completions"
@@ -48,8 +57,5 @@ def select_context(history, num_first, num_recent):
     print('history length' + str(len(history)))
     return history[:num_first] + history[-(num_recent):]
 
-def send_openai_message(messages, model=OPENAI_MODEL):
-    return send_api_message(openai_client, messages, model)
-
-def send_groq_message(messages, model=GROQ_MODEL):
-    return send_api_message(groq_client, messages, model)
+def route_api_call(messages, model=model):
+    return send_api_message(client, messages, model)

@@ -7,7 +7,7 @@ from .data_processing import results_to_dataframe
 from .embedding import generate_embedding
 from .pinecone_utils import query_pinecone
 from .segment_processing import process_single_segment, filter_non_us
-from config.settings import RELEVANCE_THRESHOLD
+from config.settings import RELEVANCE_THRESHOLD, MAX_RERANK_WORKERS
 
 def find_first_high_relevance(query: str, presearch_filter: dict, top_k: int) -> pd.DataFrame:
     query_embedding = generate_embedding(query)
@@ -18,7 +18,7 @@ def find_first_high_relevance(query: str, presearch_filter: dict, top_k: int) ->
                        ascending=[False, True, False]).reset_index(drop=True)
 
     segments_searched = 0
-    with ThreadPoolExecutor(max_workers=10) as executor:
+    with ThreadPoolExecutor(max_workers=MAX_RERANK_WORKERS) as executor:
         futures = [executor.submit(process_single_segment, query, segment) for segment in df.to_dict('records')]
         
         for future in as_completed(futures):

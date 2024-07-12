@@ -55,7 +55,7 @@ INCLUDED_IMPROVING_PROMPT = """Please improve the included segments to better ta
 
 EXCLUDED_IMPROVING_PROMPT = """Refine the excluded segments for optimal customer targeting. An effective exclusion strategy excludes groups whose intersection represents low-conversion prospects. Avoid describing segments through negation, for example instead of writing 'People who did not show interest in luxury products' write 'Budget shoppers'. Return the updated JSON structure with enhanced exclusion segments."""
 
-REPHRASAL_PROMPT= """Rephrase the following segment descriptions to align with common audience segments discoverable in major data marketplaces (e.g., Facebook Audience Insights, Google Ads Audience Manager). Provide the updated JSON structure with the improved segments.
+REPHRASAL_PROMPT= """Rephrase the following segment descriptions to align with common audience segments discoverable in major data marketplaces (e.g., Facebook Audience Insights, Google Ads Audience Manager). If they are too complex to rephrase, split them into two simpler segments. Provide the updated JSON structure with the improved segments.
 """
 
 DECOMPOSE_PROMPT = """
@@ -75,14 +75,13 @@ When you respond please only include the numbered list and nothing else.
 
 ### Search prompts
 
-RERANK_PROMPT = """On a scale of 0 to 10, how similar is the actual segment to the desired segment?
+RERANK_PROMPT = """On a scale of 0 to 10, how similar is the actual segment to the specified desired segment?
 
 Desired segment: "{query}"
 
 Actual segment: "{doc}"
 
-Provide only a numeric score between 0 and 10, where 0 is not relevant at all and 10 is extremely relevant.
-If an actual segment has a non-us location mentioned in it, give it a 0.
+Provide only a numeric score between 0 and 10, where 0 is not similar at all and 10 is extremely similar.
 """
 
 ### researcher prompts

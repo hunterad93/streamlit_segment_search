@@ -8,13 +8,14 @@ OFFLINE_MODEL = "llama-3-sonar-large-32k-chat" # Offline model used for company 
 OPENAI_MODEL = "gpt-4o" # OpenAI model used for audience generation
 GROQ_MODEL = "llama3-70b-8192" # Groq model used for audience generation
 RERANKER_MODEL = "gpt-3.5-turbo" # Reranker model used for actual segment searching
+API_SELECTOR = 'groq' # 'openai' or 'groq'
 
 # Parameters
-MAX_RERANK_WORKERS = 100 # Max concurrency for search reranking
-RELEVANCE_THRESHOLD = .1 #.9 # Relevance threshold for search reranking
+MAX_RERANK_WORKERS = 25 # Max concurrency for search reranking
+RELEVANCE_THRESHOLD = .85 #.9 # Relevance threshold for search reranking
 RERANK_TOP_K = 3 
 FALLBACK_TOP_K = 0
-PINECONE_TOP_K = 50 #300 Number of segments to return from initial pinecone search
+PINECONE_TOP_K = 500
 CONTEXT_LENGTH_START = 2 # Number of messages to pass from beginning of conversation
 CONTEXT_LENGTH_END = 8 # Number of messages to pass from end of conversation
 

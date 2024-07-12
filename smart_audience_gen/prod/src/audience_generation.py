@@ -1,4 +1,6 @@
-from src.api_clients import send_perplexity_message, send_groq_message
+import json
+
+from src.api_clients import send_perplexity_message, route_api_call
 from src.data_processing import extract_and_correct_json
 from config.prompts import (
     COMPANY_RESEARCH_PROMPT,
@@ -16,7 +18,7 @@ def process_message_queue(message_queue, conversation_history):
         formatted_prompt = prompt.format(**format_args) if format_args else prompt
         conversation_history.append({"role": "user", "content": formatted_prompt})
         
-        response = send_groq_message(conversation_history)
+        response = route_api_call(conversation_history)
         conversation_history.append({"role": "assistant", "content": response})
         
         results[prompt_name] = response
@@ -41,7 +43,7 @@ def generate_audience_segments(company_name, company_description, conversation_h
         ("Rephrasing segments", REPHRASAL_PROMPT, {"company_name": company_name})
     ]
 
-    results, updated_history = process_message_queue(message_queue[:2], conversation_history)
+    results, updated_history = process_message_queue(message_queue[:], conversation_history)
     last_key = list(results.keys())[-1]
     return extract_and_correct_json(results[last_key]), updated_history
 
@@ -50,3 +52,19 @@ def generate_audience(company_name, conversation_history):
     company_description, updated_history = generate_company_description(company_name, conversation_history)
     audience_segments, final_history = generate_audience_segments(company_name, company_description, updated_history)
     return audience_segments, final_history
+
+def process_user_feedback(extracted_audience_json, user_feedback, conversation_history):
+    prompt = f"""
+    Current audience JSON: {json.dumps(extracted_audience_json, indent=2)}
+
+    User feedback: {user_feedback}
+
+    Please update the audience JSON based on the user's feedback. Provide only the updated JSON in your response, without any additional explanation.
+    """
+    
+    conversation_history.append({"role": "user", "content": prompt})
+    response = route_api_call(conversation_history)
+    conversation_history.append({"role": "assistant", "content": response})
+    
+    updated_json = extract_and_correct_json(response)
+    return updated_json, conversation_history
