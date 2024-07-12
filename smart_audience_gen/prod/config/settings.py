@@ -1,20 +1,22 @@
 import streamlit as st
 
 # Constants
-EMBEDDING_MODEL = "text-embedding-3-large"
-PINECONE_INDEX_NAME = "3rd-party-data-v2"
-ONLINE_MODEL = "llama-3-sonar-large-32k-online"
-OFFLINE_MODEL = "llama-3-sonar-large-32k-chat"
-OPENAI_MODEL = "gpt-4o"
-GROQ_MODEL = "llama3-70b-8192"
-RERANKER_MODEL = "gpt-3.5-turbo"
+EMBEDDING_MODEL = "text-embedding-3-large" # Embedding model used to create vectors to search pinecone
+PINECONE_INDEX_NAME = "3rd-party-data-v2" # Pinecone index name
+ONLINE_MODEL = "llama-3-sonar-large-32k-online" # Online model used for company research
+OFFLINE_MODEL = "llama-3-sonar-large-32k-chat" # Offline model used for company research
+OPENAI_MODEL = "gpt-4o" # OpenAI model used for audience generation
+GROQ_MODEL = "llama3-70b-8192" # Groq model used for audience generation
+RERANKER_MODEL = "gpt-3.5-turbo" # Reranker model used for actual segment searching
 
 # Parameters
-MAX_RERANK_WORKERS = 100
-RELEVANCE_THRESHOLD = .9
-RERANK_TOP_K = 3
+MAX_RERANK_WORKERS = 100 # Max concurrency for search reranking
+RELEVANCE_THRESHOLD = .1 #.9 # Relevance threshold for search reranking
+RERANK_TOP_K = 3 
 FALLBACK_TOP_K = 0
-PINECONE_TOP_K = 300
+PINECONE_TOP_K = 50 #300 Number of segments to return from initial pinecone search
+CONTEXT_LENGTH_START = 2 # Number of messages to pass from beginning of conversation
+CONTEXT_LENGTH_END = 8 # Number of messages to pass from end of conversation
 
 # API keys
 PPLX_API_KEY = st.secrets["PPLX_API_KEY"]

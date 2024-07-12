@@ -1,26 +1,19 @@
-import os
-from typing import List, Tuple
-from config.settings import ONLINE_MODEL, PPLX_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, OPENAI_MODEL, GROQ_MODEL
-from config.prompts import BASIC_SYSTEM_PROMPT
 import requests
 from openai import OpenAI
 from groq import Groq
 from tenacity import retry, stop_after_attempt, wait_exponential
-
+from config.settings import ONLINE_MODEL, PPLX_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, OPENAI_MODEL, GROQ_MODEL, CONTEXT_LENGTH_START, CONTEXT_LENGTH_END
+from config.prompts import BASIC_SYSTEM_PROMPT
 
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
 groq_client = Groq(api_key=GROQ_API_KEY)
 
-def send_perplexity_message(message, conversation_history, model=ONLINE_MODEL, system_prompt=BASIC_SYSTEM_PROMPT):
+def send_perplexity_message(messages, model=ONLINE_MODEL):
     url = "https://api.perplexity.ai/chat/completions"
-    
-    conversation_history.append({"role": "user", "content": message})
     
     payload = {
         "model": model,
-        "messages": [
-            {"role": "system", "content": system_prompt}
-        ] + conversation_history
+        "messages": messages
     }
     
     headers = {
@@ -33,46 +26,30 @@ def send_perplexity_message(message, conversation_history, model=ONLINE_MODEL, s
     response_data = response.json()
     
     if 'choices' in response_data and len(response_data['choices']) > 0:
-        ai_response = response_data['choices'][0]['message']['content']
-        conversation_history.append({"role": "assistant", "content": ai_response})
-        return ai_response
+        return response_data['choices'][0]['message']['content']
     else:
         return "Error: Unable to get a response from the API"
 
+@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
+def send_api_message(client, messages, model):
+    try:
+        response = client.chat.completions.create(
+            model=model,
+            messages=select_context(messages, CONTEXT_LENGTH_START, CONTEXT_LENGTH_END),
+            temperature=0.0
+        )
+        return response.choices[0].message.content
+    except Exception as e:
+        return f"Error: Unable to get a response from the API. {str(e)}"
+    
 def select_context(history, num_first, num_recent):
     if len(history) <= num_first + num_recent:
         return history
     print('history length' + str(len(history)))
     return history[:num_first] + history[-(num_recent):]
 
-def prepare_messages(message, conversation_history, system_prompt):
-    messages = conversation_history.copy()
-    
-    if system_prompt and (not messages or messages[0]["role"] != "system"):
-        messages.insert(0, {"role": "system", "content": system_prompt})
-    
-    messages.append({"role": "user", "content": message})
-    return messages
+def send_openai_message(messages, model=OPENAI_MODEL):
+    return send_api_message(openai_client, messages, model)
 
-@retry(stop=stop_after_attempt(3), wait=wait_exponential(multiplier=1, min=4, max=10))
-def send_api_message(client, message, conversation_history, model, system_prompt):
-    messages = prepare_messages(message, conversation_history, system_prompt)
-    
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=messages,
-            temperature=0.0
-        )
-        ai_response = response.choices[0].message.content
-        messages.append({"role": "assistant", "content": ai_response})
-        return ai_response, messages
-    except Exception as e:
-        error_message = f"Error: Unable to get a response from the API. {str(e)}"
-        return error_message, messages
-
-def send_openai_message(message, conversation_history, model=OPENAI_MODEL, system_prompt=BASIC_SYSTEM_PROMPT):
-    return send_api_message(openai_client, message, conversation_history, model, system_prompt)
-
-def send_groq_message(message, conversation_history, model=GROQ_MODEL, system_prompt=BASIC_SYSTEM_PROMPT):
-    return send_api_message(groq_client, message, conversation_history, model, system_prompt)
+def send_groq_message(messages, model=GROQ_MODEL):
+    return send_api_message(groq_client, messages, model)
