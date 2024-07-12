@@ -5,3 +5,4 @@ pinecone-client
 pandas
 requests
 tenacity
+deepdiff
