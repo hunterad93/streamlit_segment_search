@@ -59,7 +59,7 @@ def process_user_feedback(extracted_audience_json, user_feedback, conversation_h
 
     User feedback: {user_feedback}
 
-    Please update the audience JSON based on the user's feedback. Provide only the updated JSON in your response, without any additional explanation.
+    Please update the audience JSON based on the user's feedback. Describe a plan for implementing the changes, then provide the updated JSON.
     """
     
     conversation_history.append({"role": "user", "content": prompt})

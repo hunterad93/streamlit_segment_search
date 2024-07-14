@@ -11,7 +11,7 @@ from src.ui_components import (
 )
 from src.state_management import state
 from src.audience_generation import generate_audience, process_user_feedback
-from src.audience_processing import process_audience_segments, summarize_segments
+from src.audience_search import process_audience_segments, summarize_segments
 from src.report_generation import generate_audience_report
 from src.data_processing import extract_and_correct_json
 from config.settings import PINECONE_TOP_K
