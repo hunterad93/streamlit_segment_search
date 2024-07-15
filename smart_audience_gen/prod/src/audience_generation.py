@@ -2,13 +2,16 @@ import json
 
 from src.api_clients import send_perplexity_message, route_api_call
 from src.data_processing import extract_and_correct_json
+from typing import Dict, Any, List, Tuple
 from config.prompts import (
     COMPANY_RESEARCH_PROMPT,
     AUDIENCE_BUILD_PROMPT,
     JSON_AUDIENCE_BUILD_PROMPT,
     INCLUDED_IMPROVING_PROMPT,
     EXCLUDED_IMPROVING_PROMPT,
-    REPHRASAL_PROMPT
+    REPHRASAL_PROMPT,
+    UPDATE_SEGMENTS_PROMPT,
+    DELETE_SEGMENTS_PROMPT
 )
 
 def process_message_queue(message_queue, conversation_history):
@@ -68,3 +71,95 @@ def process_user_feedback(extracted_audience_json, user_feedback, conversation_h
     
     updated_json = extract_and_correct_json(response)
     return updated_json, conversation_history
+
+def update_audience_segments(
+    current_audience: Dict[str, Any],
+    selected_segments: List[Tuple[str, str, str]],
+    conversation_history: List[Dict[str, str]]
+) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
+    """
+    Update the audience segments based on user selection.
+    
+    Args:
+    current_audience (Dict[str, Any]): The current audience JSON.
+    selected_segments (List[Tuple[str, str, str]]): List of selected segments (section, category, description).
+    conversation_history (List[Dict[str, str]]): The current conversation history.
+
+    Returns:
+    Tuple[Dict[str, Any], List[Dict[str, str]]]: Updated audience JSON and updated conversation history.
+    """
+    segments_to_remove = get_segments_to_remove(current_audience, selected_segments)
+    prompt = format_update_prompt(segments_to_remove)
+    
+    conversation_history.append({"role": "user", "content": prompt})
+    llm_response = route_api_call(conversation_history)
+    conversation_history.append({"role": "assistant", "content": llm_response})
+    
+    updated_audience = extract_and_correct_json(llm_response)
+    
+    return updated_audience, conversation_history
+
+def get_segments_to_remove(current_audience: Dict[str, Any], selected_segments: List[Tuple[str, str, str]]) -> List[str]:
+    """
+    Determine which segments need to be removed based on user selection.
+    """
+    all_segments = set()
+    for section in ['included', 'excluded']:
+        for category, segments in current_audience['Audience'][section].items():
+            for segment in segments:
+                all_segments.add((section, category, segment['description']))
+    
+    selected_set = set(selected_segments)
+    return list(all_segments - selected_set)
+
+def format_update_prompt(segments_to_remove: List[Tuple[str, str, str]]) -> str:
+    """
+    Format the prompt for updating audience segments.
+    """
+    segments_to_remove_str = "\n".join([f"- [{section}] {category}: {description}" for section, category, description in segments_to_remove])
+    
+    return UPDATE_SEGMENTS_PROMPT.format(segments_to_remove=segments_to_remove_str)
+
+def delete_unselected_segments(
+    current_audience: Dict[str, Any],
+    selected_segments: List[Tuple[str, str, str]],
+    conversation_history: List[Dict[str, str]]
+) -> Tuple[Dict[str, Any], List[Dict[str, str]]]:
+    """
+    Delete unselected segments from the current audience and update conversation history.
+    The actual json is changed, and the conversation history gets a 'fake' user and assistant message
+    so that the llm will understand the changes that took place as things progress in the edit apply cycle.
+    """
+    updated_audience = {"Audience": {"included": {}, "excluded": {}}}
+    selected_set = set(selected_segments)
+
+    segments_to_remove = get_segments_to_remove(current_audience, selected_segments)
+
+    for section in ['included', 'excluded']:
+        for category, segments in current_audience['Audience'][section].items():
+            updated_segments = [
+                segment for segment in segments
+                if (section, category, segment['description']) in selected_set
+            ]
+            if updated_segments:
+                updated_audience['Audience'][section][category] = updated_segments
+
+    # Format the segments to remove
+    deleted_segments_str = "\n".join([
+        f"- [{section}] {category}: {description}"
+        for section, category, description in segments_to_remove
+    ])
+
+    # Create a message about the deletion using the DELETE_SEGMENTS_PROMPT
+    deletion_message = DELETE_SEGMENTS_PROMPT.format(deleted_segments=deleted_segments_str)
+    
+    # Add the deletion message to the conversation history
+    conversation_history.append({"role": "user", "content": deletion_message})
+    
+    # Add the updated audience JSON to the conversation history
+    conversation_history.append({
+        "role": "assistant",
+        "content": json.dumps(updated_audience, indent=2)
+    })
+
+    return updated_audience, conversation_history

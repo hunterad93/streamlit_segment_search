@@ -1,5 +1,6 @@
 import streamlit as st
 from src.ui_utils import get_json_diff
+import json
 
 
 def render_company_input():
@@ -21,6 +22,32 @@ def render_audience_report(report):
 
 def render_button(label):
     return st.button(label)
+
+def render_segment_selection(audience_json):
+    st.subheader("Current Audience Segments")
+    selected_segments = []
+    
+    audience = audience_json['Audience']
+    
+    col1, col2 = st.columns(2)
+    
+    for i, section in enumerate(['included', 'excluded']):
+        with col1 if i == 0 else col2:
+            st.markdown(f"### {section.capitalize()}")
+            for category, segments in audience[section].items():
+                with st.expander(f"**{category}** ({len(segments)} segments)", expanded=True):
+                    for segment in segments:
+                        description = segment['description']
+                        if st.checkbox(description, value=True, key=f"{section}_{category}_{description}"):
+                            selected_segments.append((section, category, description))
+    
+    return selected_segments
+
+def render_update_segments_button():
+    return st.button("Update and Replace Segments")
+
+def render_delete_segments_button():
+    return st.button("Delete Segments")
 
 def render_json_output(json_data, old_json):
     st.subheader("Extracted Audience JSON")

@@ -58,6 +58,30 @@ EXCLUDED_IMPROVING_PROMPT = """Refine the excluded segments for optimal customer
 REPHRASAL_PROMPT= """Rephrase the following segment descriptions to align with common audience segments discoverable in major data marketplaces (e.g., Facebook Audience Insights, Google Ads Audience Manager). If they are too complex to rephrase, split them into two simpler segments. Provide the updated JSON structure with the improved segments.
 """
 
+
+UPDATE_SEGMENTS_PROMPT = """
+Please update the audience segments based on the following instructions:
+
+1. Remove the segments listed below:
+{segments_to_remove}
+
+2. Consider the user's intent behind these deletions.
+3. Add new segments to replace the deleted ones, maintaining a similar total number of segments.
+4. Ensure the new segments align with the overall audience profile and the user's apparent preferences.
+
+Please provide the updated audience in the same JSON format as the current audience.
+"""
+
+DELETE_SEGMENTS_PROMPT = """
+
+Please delete the following segments
+
+{deleted_segments}
+
+Please respond with only the updated JSON.
+
+"""
+
 DECOMPOSE_PROMPT = """
 Decompose the given specific audience segment into two broader, less specific segments. The intersection (overlap) of these two segments should closely match the original segment.
 
@@ -104,7 +128,8 @@ Focus on answering the initial question and find a single answer to satisfy the 
 Conversation:
 {conversation_history}
 
-Summary:"""
+Your response should contain the summary alone, without providing a preamble or additional context.
+"""
 
 ### report_generation prompts
 

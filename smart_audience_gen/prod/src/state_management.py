@@ -10,6 +10,7 @@ class State:
         self.user_comment = ""
         self.summary_results = None
         self.audience_report = None
+        self.final_report = None
 
     def reset(self):
         self.__init__()

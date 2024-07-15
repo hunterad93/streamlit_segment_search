@@ -34,7 +34,6 @@ def find_first_high_relevance(query: str, presearch_filter: dict, top_k: int) ->
 
 def process_audience_segments(audience_json, presearch_filter, top_k):
     results = {'Audience': {}}
-    audience_json = json.loads(audience_json)
     total_items = sum(len(descriptions) for category in ['included', 'excluded'] 
                       for descriptions in audience_json['Audience'][category].values())
     
@@ -70,7 +69,8 @@ def summarize_segments(processed_results):
                 summarized_segments = []
                 for segment in item['top_k_segments']:
                     summarized_segment = {
-                        'raw_string': segment['raw_string']
+                        'raw_string': segment['raw_string'],
+                        'BrandName': segment['BrandName']
                     }
                     summarized_segments.append(summarized_segment)
                 group_results.append({

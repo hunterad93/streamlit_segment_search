@@ -1,14 +1,14 @@
 import re
 from typing import List, Dict
 import concurrent.futures
-from tenacity import retry, stop_after_attempt, wait_exponential
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
 import pandas as pd
-
+import streamlit as st
 from config.locations import NON_US_LOCATIONS
 from config.prompts import RERANK_PROMPT
 from config.settings import RERANKER_MODEL
 
-from .api_clients import openai_client
+from .api_clients import openai_client, is_rate_limit_error, before_sleep_show_warning
 
 def filter_non_us(df: pd.DataFrame) -> pd.DataFrame:
     # Compile the pattern once
@@ -49,25 +49,39 @@ def parse_relevance_score(result: str) -> float:
         print(f"Error parsing score. Error: {str(e)}")
         return 0
 
-@retry(stop=stop_after_attempt(5), wait=wait_exponential(multiplier=1, min=4, max=60))
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=2, min=10, max=60),
+    retry=retry_if_exception(is_rate_limit_error),
+    before_sleep=before_sleep_show_warning
+)
 def gpt_score_relevance(query: str, doc: str) -> float:
     """
     Score the relevance of a document to the query using GPT-3.5.
     Returns a relevance score between 0 and 1.
     """
-    formatted_rerank_prompt = RERANK_PROMPT.format(
-        query=query,
-        doc=doc
-    )
-    response = openai_client.chat.completions.create(
-        model=RERANKER_MODEL,
-        messages=[{"role": "user", "content": formatted_rerank_prompt}],
-        max_tokens=100,
-        temperature=0
-    )
+    try:
+        formatted_rerank_prompt = RERANK_PROMPT.format(
+            query=query,
+            doc=doc
+        )
+        response = openai_client.chat.completions.create(
+            model=RERANKER_MODEL,
+            messages=[{"role": "user", "content": formatted_rerank_prompt}],
+            max_tokens=100,
+            temperature=0
+        )
 
-    result = response.choices[0].message.content.strip()
-    return parse_relevance_score(result)
+        result = response.choices[0].message.content.strip()
+        return parse_relevance_score(result)
+    except Exception as e:
+        if is_rate_limit_error(e):
+            st.warning(f"Rate limit error occurred: {str(e)}")
+            raise  # Re-raise to trigger retry
+        else:
+            error_message = f"Error in gpt_score_relevance: {str(e)}"
+            st.error(error_message)
+            return 0  # Return 0 score on error
 
 def process_single_segment(query: str, segment: Dict) -> Dict:
     """Process a single segment."""
