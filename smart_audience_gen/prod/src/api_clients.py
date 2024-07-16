@@ -20,6 +20,26 @@ elif API_SELECTOR == 'groq':
     client = groq_client
     model = GROQ_MODEL
 
+def is_rate_limit_error(exception):
+    return isinstance(exception, requests.exceptions.HTTPError) and exception.response.status_code == 429
+
+def show_retry_warning(retry_state):
+    exception = retry_state.outcome.exception()
+    if is_rate_limit_error(exception):
+        message = (f"Rate limit hit. Retrying in {retry_state.next_action.sleep:.2f} seconds. "
+                   f"Attempt {retry_state.attempt_number} of {retry_state.stop.max_attempt_number}")
+        st.warning(message)
+
+def before_sleep_show_warning(retry_state):
+    show_retry_warning(retry_state)
+
+
+@retry(
+    stop=stop_after_attempt(5),
+    wait=wait_exponential(multiplier=2, min=10, max=60),
+    retry=retry_if_exception(is_rate_limit_error),
+    before_sleep=before_sleep_show_warning
+)
 def send_perplexity_message(messages, model=ONLINE_MODEL):
     url = "https://api.perplexity.ai/chat/completions"
     
@@ -41,19 +61,6 @@ def send_perplexity_message(messages, model=ONLINE_MODEL):
         return response_data['choices'][0]['message']['content']
     else:
         return "Error: Unable to get a response from the API"
-
-def is_rate_limit_error(exception):
-    return isinstance(exception, requests.exceptions.HTTPError) and exception.response.status_code == 429
-
-def show_retry_warning(retry_state):
-    exception = retry_state.outcome.exception()
-    if is_rate_limit_error(exception):
-        message = (f"Rate limit hit. Retrying in {retry_state.next_action.sleep:.2f} seconds. "
-                   f"Attempt {retry_state.attempt_number} of {retry_state.stop.max_attempt_number}")
-        st.warning(message)
-
-def before_sleep_show_warning(retry_state):
-    show_retry_warning(retry_state)
 
 @retry(
     stop=stop_after_attempt(5),
