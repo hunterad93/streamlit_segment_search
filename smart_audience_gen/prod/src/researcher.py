@@ -1,6 +1,9 @@
+from typing import Dict, List
+
 from config.settings import ONLINE_MODEL, OFFLINE_MODEL
 from config.prompts import ONLINE_SYSTEM_PROMPT, OFFLINE_SYSTEM_PROMPT, SUMMARY_PROMPT, INITIAL_RESEARCH_PROMPT, FOLLOW_UP_PROMPT, CATEGORIZE_SEGMENT_PROMPT, BASIC_SYSTEM_PROMPT
 from src.api_clients import send_perplexity_message
+from src.pinecone_utils import cache_summary, get_cached_summary
 
 def categorize_segment(segment):
     messages = [{"role": "user", "content": CATEGORIZE_SEGMENT_PROMPT.format(segment=segment)}]
@@ -18,45 +21,42 @@ def summarize_conversation(initial_prompt, conversation_history):
     )
     return summary
 
-def create_conversation(domain, segment, num_iterations):
-    online_model = ONLINE_MODEL
-    offline_model = OFFLINE_MODEL
-    
-    online_conversation = []
-    offline_conversation = []
-    
-    # Replace 'Data Alliance' with 'The Trade Desk Data Alliance'
+def create_conversation(domain: str, segment: str, num_iterations: int) -> tuple[List[Dict[str, str]], str]:
     if domain == "Data Alliance":
         summary = "The Trade Desk Data Alliance curates the highest quality 3rd party data available for purchase. We trust their curation and prefer using their segments whenever they are available."
         return [], summary
     
     data_type = categorize_segment(segment)
 
-    # Initial query
     initial_prompt = INITIAL_RESEARCH_PROMPT.format(
         domain=domain,
         data_type=data_type
     )
 
-    online_conversation.append({"role": "user", "content": initial_prompt})
-    print(initial_prompt)
+    # Check if summary is already cached
+    cached_result = get_cached_summary(initial_prompt)
+    if cached_result:
+        return [], cached_result["summary"]
+
+    # If not cached, proceed with conversation
+    online_conversation = [{"role": "user", "content": initial_prompt}]
+    offline_conversation = []
+
     for i in range(num_iterations):
-        # Get response from online model
-        online_response = send_perplexity_message(online_conversation, online_model)
+        online_response = send_perplexity_message(online_conversation, ONLINE_MODEL)
         online_conversation.append({"role": "assistant", "content": online_response})
         
-        # Update offline conversation
         offline_conversation = online_conversation.copy()
         
         if i < num_iterations - 1:
-            # Generate follow-up question using offline model
             offline_conversation.append({"role": "user", "content": FOLLOW_UP_PROMPT})
-            follow_up_question = send_perplexity_message(offline_conversation, offline_model)
-            
-            # Add follow-up question to conversations
+            follow_up_question = send_perplexity_message(offline_conversation, OFFLINE_MODEL)
             online_conversation.append({"role": "user", "content": follow_up_question})
 
     summary = summarize_conversation(initial_prompt, offline_conversation)
+    
+    # Cache the new summary
+    cache_summary(domain, data_type, initial_prompt, summary)
     
     return offline_conversation, summary
 

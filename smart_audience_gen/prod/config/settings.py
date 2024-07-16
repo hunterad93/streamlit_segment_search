@@ -3,6 +3,7 @@ import streamlit as st
 # Constants
 EMBEDDING_MODEL = "text-embedding-3-large" # Embedding model used to create vectors to search pinecone
 PINECONE_INDEX_NAME = "3rd-party-data-v2" # Pinecone index name
+PINECONE_CACHE_INDEX = "researcher-cache" # Pinecone cache index name
 ONLINE_MODEL = "llama-3-sonar-large-32k-online" # Online model used for company research
 OFFLINE_MODEL = "llama-3-sonar-large-32k-chat" # Offline model used for company research
 OPENAI_MODEL = "gpt-4-turbo-2024-04-09" # OpenAI model used for audience generation
