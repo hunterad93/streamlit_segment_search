@@ -2,10 +2,16 @@ from openai import OpenAI
 import re
 from typing import List, Dict
 import concurrent.futures
-from config import OPENAI_API_KEY, NON_US_LOCATIONS
+from config import OPENAI_API_KEY, NON_US_LOCATIONS, OPEN_ROUTER_KEY
 import pandas as pd
+import tenacity
 
 client = OpenAI(api_key=OPENAI_API_KEY)
+
+open_router_client = OpenAI(
+  base_url="https://openrouter.ai/api/v1",
+  api_key=OPEN_ROUTER_KEY,
+)
 
 def filter_non_us(df: pd.DataFrame) -> pd.DataFrame:
     # Compile the pattern once
@@ -28,6 +34,7 @@ def filter_non_us(df: pd.DataFrame) -> pd.DataFrame:
 def filter_duplicates(df: pd.DataFrame) -> pd.DataFrame:
     return df.drop_duplicates(subset=['Segment Description', 'Segment Name'], keep='first')
 
+@tenacity.retry(stop=tenacity.stop_after_attempt(6), wait=tenacity.wait_exponential(multiplier=1, min=4, max=60))
 def gpt_score_relevance(query: str, doc: str) -> float:
     """
     Score the relevance of a document to the query using GPT-3.5.
@@ -43,8 +50,8 @@ def gpt_score_relevance(query: str, doc: str) -> float:
     Provide only a numeric score between 0 and 100, where 0 is not relevant at all and 100 is extremely relevant.
     """
 
-    response = client.chat.completions.create(
-        model="gpt-3.5-turbo",
+    response = open_router_client.chat.completions.create(
+        model="google/gemma-2-9b-it",
         messages=[{"role": "user", "content": prompt}],
         max_tokens=100,
         temperature=0
@@ -65,7 +72,7 @@ def gpt_score_relevance(query: str, doc: str) -> float:
         print(f"Error parsing score for document: {doc[:50]}... Error: {str(e)}")
         return 0
 
-def gpt_rerank_results(query: str, docs: List[str], max_workers: int = 100) -> Dict[str, float]:
+def gpt_rerank_results(query: str, docs: List[str], max_workers: int = 10) -> Dict[str, float]:
     """
     Rerank documents by scoring each document's relevance to the query using GPT-3.5.
     Uses concurrent.futures to parallelize the scoring process.
