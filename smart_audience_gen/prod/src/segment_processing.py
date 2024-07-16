@@ -6,9 +6,9 @@ import pandas as pd
 import streamlit as st
 from config.locations import NON_US_LOCATIONS
 from config.prompts import RERANK_PROMPT
-from config.settings import RERANKER_MODEL
+from config.settings import RERANKER_MODEL, OPEN_ROUTER_RERANK
 
-from .api_clients import openai_client, is_rate_limit_error, before_sleep_show_warning
+from .api_clients import openai_client, open_router_client, is_rate_limit_error, before_sleep_show_warning
 
 def filter_non_us(df: pd.DataFrame) -> pd.DataFrame:
     # Compile the pattern once
@@ -41,7 +41,7 @@ def parse_relevance_score(result: str) -> float:
     try:
         match = re.search(r'\d+(?:\.\d+)?', result)
         if match:
-            score = float(match.group()) / 10  # Normalize to 0-1 range
+            score = float(match.group()) / 100  # Normalize to 0-1 range
             return max(0, min(score, 1))  # Ensure score is between 0 and 1
         else:
             raise ValueError("No number found in response")
@@ -65,8 +65,8 @@ def gpt_score_relevance(query: str, doc: str) -> float:
             query=query,
             doc=doc
         )
-        response = openai_client.chat.completions.create(
-            model=RERANKER_MODEL,
+        response = open_router_client.chat.completions.create(
+            model=OPEN_ROUTER_RERANK,
             messages=[{"role": "user", "content": formatted_rerank_prompt}],
             max_tokens=100,
             temperature=0
