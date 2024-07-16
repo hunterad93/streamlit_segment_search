@@ -4,7 +4,7 @@ import json
 
 
 def render_company_input():
-    return st.text_input("Enter company name:", "Bubba Burgers")
+    return st.text_input("Enter company name:", "Texas Oncology")
 
 def render_user_feedback():
     return st.text_area("Provide feedback on the audience segments:", key="user_feedback")
@@ -22,6 +22,15 @@ def render_audience_report(report):
 
 def render_button(label):
     return st.button(label)
+
+def render_presearch_filter_option() -> bool:
+    """Render a radio button for presearch filter option."""
+    filter_option = st.radio(
+        "Apply presearch filter for Data Alliance?",
+        ("No", "Yes"),
+        index=0
+    )
+    return filter_option == "Yes"
 
 def render_segment_selection(audience_json):
     st.subheader("Current Audience Segments")

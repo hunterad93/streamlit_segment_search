@@ -2,7 +2,7 @@ import requests
 from openai import OpenAI
 from groq import Groq
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception, before_sleep
-from config.settings import ONLINE_MODEL, PPLX_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, OPENAI_MODEL, GROQ_MODEL, CONTEXT_LENGTH_START, CONTEXT_LENGTH_END, API_SELECTOR
+from config.settings import ONLINE_MODEL, PPLX_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, OPEN_ROUTER_KEY, OPENAI_MODEL, OPEN_ROUTER_MODEL, GROQ_MODEL, CONTEXT_LENGTH_START, CONTEXT_LENGTH_END, API_SELECTOR
 from config.prompts import BASIC_SYSTEM_PROMPT
 import logging
 import streamlit as st
@@ -12,6 +12,10 @@ logger = logging.getLogger(__name__)
 
 openai_client = OpenAI(api_key=OPENAI_API_KEY)
 groq_client = Groq(api_key=GROQ_API_KEY)
+open_router_client = client = OpenAI(
+  base_url="https://openrouter.ai/api/v1",
+  api_key=OPEN_ROUTER_KEY,
+)
 
 if API_SELECTOR == 'openai':
     client = openai_client
@@ -19,6 +23,9 @@ if API_SELECTOR == 'openai':
 elif API_SELECTOR == 'groq':
     client = groq_client
     model = GROQ_MODEL
+elif API_SELECTOR == 'open_router':
+    client = open_router_client
+    model = OPEN_ROUTER_MODEL
 
 def is_rate_limit_error(exception):
     return isinstance(exception, requests.exceptions.HTTPError) and exception.response.status_code == 429

@@ -4,7 +4,7 @@ from typing import Dict, Any
 from src.ui_components import (
     render_company_input, render_json_diff, render_actual_segments,
     render_audience_report, render_button, render_user_feedback,
-    render_segment_selection)
+    render_segment_selection, render_presearch_filter_option)
 from src.state_management import StateManager
 from src.data_processing import ensure_dict
 from src.audience_generation import generate_audience, process_user_feedback, update_audience_segments, delete_unselected_segments
@@ -13,9 +13,10 @@ from src.report_generation import generate_audience_report
 from src.researcher import generate_segment_summaries
 from config.settings import PINECONE_TOP_K
 
-def process_audience_data(extracted_json: Dict[str, Any]) -> Dict[str, Any]:
+def process_audience_data(extracted_json: Dict[str, Any], use_presearch_filter: bool) -> Dict[str, Any]:
     """Process the extracted audience data."""
-    processed_results = process_audience_segments(extracted_json, presearch_filter={}, top_k=PINECONE_TOP_K)
+    presearch_filter = {"BrandName": "Data Alliance"} if use_presearch_filter else {}
+    processed_results = process_audience_segments(extracted_json, presearch_filter=presearch_filter, top_k=PINECONE_TOP_K)
     return summarize_segments(processed_results)
 
 def generate_initial_audience(company_name: str, conversation_history: list) -> None:
@@ -36,7 +37,6 @@ def handle_user_feedback(audience_json: Dict[str, Any]) -> None:
         with st.spinner("Applying feedback..."):
             StateManager.update(old_audience_json=audience_json)
             updated_json, updated_history = process_user_feedback(
-                audience_json,
                 user_feedback,
                 StateManager.get('conversation_history')
             )
@@ -50,51 +50,6 @@ def handle_user_feedback(audience_json: Dict[str, Any]) -> None:
             )
         st.success("Feedback applied successfully.")
         st.rerun()
-        
-def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
-    """Handle the selection of segments by the user."""
-    selected_segments = render_segment_selection(audience_json)
-    
-    col1, col2 = st.columns(2)
-    
-    with col1:
-        if render_button("Delete and Replace Unselected Segments"):
-            with st.spinner("Updating audience segments..."):
-                updated_json, updated_history = update_audience_segments(
-                    audience_json,
-                    selected_segments,
-                    StateManager.conversation_history
-                )
-                StateManager.update(
-                    old_audience_json=audience_json,
-                    extracted_audience_json=updated_json,
-                    conversation_history=updated_history,
-                    summary_results=None,
-                    audience_report=None,
-                    final_report=None,
-                    stage=1
-                )
-            st.success("Audience segments updated successfully.")
-            st.rerun()
-    with col2:
-        if render_button("Delete Unselected Segments"):
-            with st.spinner("Deleting unselected segments..."):
-                updated_json, updated_history = delete_unselected_segments(
-                    audience_json, 
-                    selected_segments,
-                    StateManager.conversation_history
-                )
-                StateManager.update(
-                    old_audience_json=audience_json,
-                    extracted_audience_json=updated_json,
-                    conversation_history=updated_history,
-                    summary_results=None,
-                    audience_report=None,
-                    final_report=None,
-                    stage=1
-                )
-            st.success("Unselected segments deleted successfully.")
-            st.rerun()
 
 def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
     """Handle the selection of segments by the user."""
@@ -143,9 +98,14 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
 
 def process_and_render_segments() -> None:
     """Process and render the audience segments."""
+    use_presearch_filter = StateManager.get('use_presearch_filter')
+    
     with st.spinner("Processing audience segments..."):
         if not StateManager.get('summary_results'):
-            summary_results = process_audience_data(ensure_dict(StateManager.get('extracted_audience_json')))
+            summary_results = process_audience_data(
+                ensure_dict(StateManager.get('extracted_audience_json')),
+                use_presearch_filter
+            )
             StateManager.update(summary_results=summary_results)
     
     render_actual_segments(StateManager.get('summary_results'))
@@ -197,6 +157,10 @@ def main() -> None:
             render_json_diff(StateManager.get('old_audience_json'), audience_json)
         
         handle_user_feedback(audience_json)
+        
+        # Add the presearch filter option here
+        use_presearch_filter = render_presearch_filter_option()
+        StateManager.update(use_presearch_filter=use_presearch_filter)
         
         if render_button("Search Actual Segments"):
             StateManager.update(

@@ -11,7 +11,9 @@ from config.prompts import (
     EXCLUDED_IMPROVING_PROMPT,
     REPHRASAL_PROMPT,
     UPDATE_SEGMENTS_PROMPT,
-    DELETE_SEGMENTS_PROMPT
+    DELETE_SEGMENTS_PROMPT,
+    FEEDBACK_PROMPT,
+    COMPARISON_DESCRIPTION
 )
 
 def process_message_queue(message_queue, conversation_history):
@@ -52,18 +54,12 @@ def generate_audience_segments(company_name, company_description, conversation_h
 
 def generate_audience(company_name, conversation_history):
     """Main function to generate audience"""
-    company_description, updated_history = generate_company_description(company_name, conversation_history)
-    audience_segments, final_history = generate_audience_segments(company_name, company_description, updated_history)
+    company_description, _ = generate_company_description(company_name, conversation_history)
+    audience_segments, final_history = generate_audience_segments(company_name, company_description, [])
     return audience_segments, final_history
 
-def process_user_feedback(extracted_audience_json, user_feedback, conversation_history):
-    prompt = f"""
-    Current audience JSON: {json.dumps(extracted_audience_json, indent=2)}
-
-    User feedback: {user_feedback}
-
-    Please update the audience JSON based on the user's feedback. Describe a plan for implementing the changes, then provide the updated JSON.
-    """
+def process_user_feedback(user_feedback, conversation_history):
+    prompt = FEEDBACK_PROMPT.format(user_feedback=user_feedback)
     
     conversation_history.append({"role": "user", "content": prompt})
     response = route_api_call(conversation_history)

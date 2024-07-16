@@ -8,12 +8,13 @@ ONLINE_MODEL = "llama-3-sonar-large-32k-online" # Online model used for company 
 OFFLINE_MODEL = "llama-3-sonar-large-32k-chat" # Offline model used for company research
 OPENAI_MODEL = "gpt-4-turbo-2024-04-09" # OpenAI model used for audience generation
 GROQ_MODEL = "llama3-70b-8192" # Groq model used for audience generation
+OPEN_ROUTER_MODEL = "anthropic/claude-3.5-sonnet" # Open Router model used for audience generation
 RERANKER_MODEL = "gpt-3.5-turbo" # Reranker model used for actual segment searching
-API_SELECTOR = 'groq' # 'openai' or 'groq'
+API_SELECTOR = 'open_router' # 'openai' or 'groq' or 'open_router'
 
 # Parameters
 MAX_RERANK_WORKERS = 25 # Max concurrency for search reranking
-RELEVANCE_THRESHOLD = .85 #.9 # Relevance threshold for search reranking
+RELEVANCE_THRESHOLD = .9 # Relevance threshold for search reranking
 RERANK_TOP_K = 3 
 FALLBACK_TOP_K = 0
 PINECONE_TOP_K = 500
@@ -25,3 +26,5 @@ PPLX_API_KEY = st.secrets["PPLX_API_KEY"]
 GROQ_API_KEY = st.secrets["GROQ_API_KEY"]
 OPENAI_API_KEY = st.secrets["OPENAI_API_KEY"]
 PINECONE_API_KEY = st.secrets["PINECONE_API_KEY"]
+OPEN_ROUTER_KEY = st.secrets["OPEN_ROUTER_KEY"]
+

@@ -13,6 +13,7 @@ class StateManager:
         st.session_state.summary_results = None
         st.session_state.audience_report = None
         st.session_state.final_report = None
+        st.session_state.use_presearch_filter = False
         st.session_state.session_id = str(uuid.uuid4())
 
     @staticmethod
