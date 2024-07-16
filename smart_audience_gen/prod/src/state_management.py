@@ -1,48 +1,45 @@
 import streamlit as st
 import uuid
 
-class State:
-    def __init__(self):
-        self.reset()
+class StateManager:
+    @staticmethod
+    def reset():
+        st.session_state.stage = 0
+        st.session_state.company_name = ""
+        st.session_state.extracted_audience_json = None
+        st.session_state.old_audience_json = None
+        st.session_state.conversation_history = []
+        st.session_state.user_comment = ""
+        st.session_state.summary_results = None
+        st.session_state.audience_report = None
+        st.session_state.final_report = None
+        st.session_state.session_id = str(uuid.uuid4())
 
-    def reset(self):
-        self.stage = 0
-        self.company_name = ""
-        self.extracted_audience_json = None
-        self.old_audience_json = None
-        self.conversation_history = []
-        self.user_comment = ""
-        self.summary_results = None
-        self.audience_report = None
-        self.final_report = None
-        self.session_id = str(uuid.uuid4())
-
-    def update(self, **kwargs):
+    @staticmethod
+    def update(**kwargs):
         for key, value in kwargs.items():
-            if hasattr(self, key):
-                setattr(self, key, value)
+            if key in st.session_state:
+                st.session_state[key] = value
             else:
                 raise AttributeError(f"State has no attribute '{key}'")
 
-    def get(self, attr):
-        return getattr(self, attr)
+    @staticmethod
+    def get(attr):
+        return st.session_state.get(attr)
 
-    def increment_stage(self):
-        self.stage += 1
+    @staticmethod
+    def increment_stage():
+        st.session_state.stage += 1
 
-    def add_to_conversation(self, role, content):
-        self.conversation_history.append({"role": role, "content": content})
+    @staticmethod
+    def add_to_conversation(role, content):
+        st.session_state.conversation_history.append({"role": role, "content": content})
 
-    def clear_audience_data(self):
-        self.extracted_audience_json = None
-        self.conversation_history = []
-        self.summary_results = None
-        self.audience_report = None
+    @staticmethod
+    def clear_audience_data():
+        st.session_state.extracted_audience_json = None
+        st.session_state.conversation_history = []
+        st.session_state.summary_results = None
+        st.session_state.audience_report = None
 
-def get_state():
-    if 'app_state' not in st.session_state:
-        st.session_state.app_state = State()
-    return st.session_state.app_state
-
-# Use this to access state in your app
-state = get_state()
+# No need for get_state() function or global state variable
