@@ -101,19 +101,19 @@ def process_and_render_segments() -> None:
     use_presearch_filter = StateManager.get('use_presearch_filter')
     
     with st.spinner("Processing audience segments..."):
-        if not StateManager.get('summary_results'):
-            summary_results = process_audience_data(
+        if not StateManager.get('post_search_results'):
+            post_search_results = process_audience_data(
                 ensure_dict(StateManager.get('extracted_audience_json')),
                 use_presearch_filter
             )
-            StateManager.update(summary_results=summary_results)
+            StateManager.update(post_search_results=post_search_results)
     
-    render_actual_segments(StateManager.get('summary_results'))
+    render_actual_segments(StateManager.get('post_search_results'))
     
     if not StateManager.get('audience_report'):
         with st.spinner("Generating audience report..."):
             audience_report, updated_history = generate_audience_report(
-                StateManager.get('summary_results'), 
+                StateManager.get('post_search_results'), 
                 StateManager.get('company_name'), 
                 StateManager.get('conversation_history')
             )
@@ -127,7 +127,7 @@ def process_and_render_segments() -> None:
 def generate_methodology_report() -> None:
     """Generate data collection methodology summaries."""
     with st.spinner("Generating data collection methodology summaries..."):
-        segments = extract_research_inputs(StateManager.get('summary_results'))
+        segments = extract_research_inputs(StateManager.get('post_search_results'))
         segment_summaries = generate_segment_summaries(segments)
         st.json(segment_summaries)
 
