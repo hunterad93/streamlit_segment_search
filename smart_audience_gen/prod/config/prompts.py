@@ -72,6 +72,12 @@ Please update the audience segments based on the following instructions:
 Please provide the updated audience in the same JSON format as the current audience.
 """
 
+FEEDBACK_PROMPT = """
+    User feedback: {user_feedback}
+
+    Please update the audience JSON based on the user's feedback. Describe a plan for implementing the changes, then provide the updated JSON.
+    """
+
 DELETE_SEGMENTS_PROMPT = """
 
 Please delete the following segments
@@ -177,4 +183,15 @@ Respond with your set of suggestions for which segments should be paired.
 PAIRING_IMPLEMENTATION_PROMPT = """
 Please implement the changes suggest above. You will need to create subgroups within included and excluded using "operator":"and"[] to group pairs suggested above.
 For any segments that are not paired, please return them in the included or excluded groups as appropriate. Please return the updated JSON structure without explanations or reasoning.
+"""
+
+COMPARISON_DESCRIPTION="""
+Target Customers
+Texas Oncology primarily serves cancer patients and those with blood disorders. Their target customers include:
+Cancer Patients: The organization caters to individuals diagnosed with various types of cancer, offering treatment and care throughout their cancer journey.
+Blood Disorder Patients: Texas Oncology also provides care for patients with blood disorders.
+Local Communities: With over 280 locations across Texas and southeastern Oklahoma, Texas Oncology aims to serve patients in their local communities, allowing them to receive treatment close to home.
+Newly Diagnosed Patients: The organization offers resources and support for those who have recently received a cancer diagnosis.
+Cancer Survivors: Texas Oncology provides ongoing care and support for cancer survivors, recognizing that survivorship begins at the time of diagnosis and continues throughout life.
+Families and Caregivers: The organization acknowledges the importance of support from family and friends, considering them part of the cancer care journey
 """
