@@ -6,3 +6,4 @@ pandas
 requests
 tenacity
 deepdiff
+uuid

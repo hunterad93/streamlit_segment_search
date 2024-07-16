@@ -128,6 +128,15 @@ def generate_methodology_report() -> None:
 def main() -> None:
     """Main function to run the Streamlit app."""
     st.set_page_config(layout="wide")
+    
+    # Check for new session and reset state if necessary
+    if 'session_id' not in st.session_state:
+        st.session_state.session_id = state.session_id
+        state.reset()
+    elif st.session_state.session_id != state.session_id:
+        st.session_state.session_id = state.session_id
+        state.reset()
+
     st.title("Smart Audience Generator")
 
     new_company_name = render_company_input()

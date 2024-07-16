@@ -1,7 +1,11 @@
 import streamlit as st
+import uuid
 
 class State:
     def __init__(self):
+        self.reset()
+
+    def reset(self):
         self.stage = 0
         self.company_name = ""
         self.extracted_audience_json = None
@@ -11,9 +15,7 @@ class State:
         self.summary_results = None
         self.audience_report = None
         self.final_report = None
-
-    def reset(self):
-        self.__init__()
+        self.session_id = str(uuid.uuid4())
 
     def update(self, **kwargs):
         for key, value in kwargs.items():
@@ -38,9 +40,9 @@ class State:
         self.audience_report = None
 
 def get_state():
-    if 'state' not in st.session_state:
-        st.session_state.state = State()
-    return st.session_state.state
+    if 'app_state' not in st.session_state:
+        st.session_state.app_state = State()
+    return st.session_state.app_state
 
-# Global state instance
+# Use this to access state in your app
 state = get_state()
