@@ -105,13 +105,13 @@ When you respond please only include the numbered list and nothing else.
 
 ### Search prompts
 
-RERANK_PROMPT = """On a scale of 0 to 100, how similar is the actual segment to the specified desired segment?
+RERANK_PROMPT = """On a scale of 0 to 100, how effective would the data segment be for targeting the user's desired audience?
 
-Desired segment: "{query}"
+Desired audience: "{query}"
 
-Actual segment: "{doc}"
+Data segment: "{doc}"
 
-Provide only a numeric score between 0 and 100, where 0 is not similar at all and 100 is extremely similar.
+Provide only a numeric score between 0 and 100, where 0 is not effective at all and 100 is extremely effective.
 """
 
 ### researcher prompts
