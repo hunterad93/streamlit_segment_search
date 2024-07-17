@@ -41,13 +41,13 @@ def gpt_score_relevance(query: str, doc: str) -> float:
     Returns a relevance score between 0 and 1.
     """
 
-    prompt = f"""On a scale of 0 to 100, how similar is the actual segment to the desired segment?
+    prompt = f"""On a scale of 0 to 100, how effective would the data segment be for targeting the user's desired audience?
 
-    Desired segment: "{query}"
+    Desired audience: "{query}"
 
-    Actual segment: "{doc}"
+    Data segment: "{doc}"
 
-    Provide only a numeric score between 0 and 100, where 0 is not relevant at all and 100 is extremely relevant.
+    Provide only a numeric score between 0 and 100, where 0 is not effective at all and 100 is extremely effective.
     """
 
     response = open_router_client.chat.completions.create(
