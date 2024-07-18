@@ -75,7 +75,7 @@ Please provide the updated audience in the same JSON format as the current audie
 FEEDBACK_PROMPT = """
     User feedback: {user_feedback}
 
-    Please update the audience JSON based on the user's feedback. Describe a plan for implementing the changes, then provide the updated JSON.
+    Please update the audience JSON based on the user's feedback. Describe a plan for implementing the changes, then provide the updated JSON, the outer structure of the JSON should be the same, even if there are empty sections.
     """
 
 DELETE_SEGMENTS_PROMPT = """
@@ -87,6 +87,22 @@ Please delete the following segments
 Please respond with only the updated JSON.
 
 """
+
+REDUCE_PROMPT = """
+Reduce the segments to only the most impactful ones, focusing on quality over quantity. Describe a plan for implementing the changes, then provide the updated JSON, maintaining the original structure.
+"""
+
+EXPAND_PROMPT = """
+Expand the audience segments creatively, focusing on both targeting and exclusion. Add detailed, specific segments that are discoverable in data marketplaces. Consider:
+
+1. Niche interests within existing categories
+2. Varying engagement levels
+3. Relevant behaviors and life stages
+4. Complementary exclusions to refine targeting
+
+Provide the updated JSON, maintaining the original structure.
+"""
+
 
 DECOMPOSE_PROMPT = """
 Decompose the given specific audience segment into two broader, less specific segments. The intersection (overlap) of these two segments should closely match the original segment.

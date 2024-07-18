@@ -11,7 +11,7 @@ GROQ_MODEL = "llama3-70b-8192" # Groq model used for audience generation
 OPEN_ROUTER_MODEL = "anthropic/claude-3.5-sonnet" # Open Router model used for audience generation # anthropic/claude-3.5-sonnet # meta-llama/llama-3-70b-instruct
 OPEN_ROUTER_RERANK = "google/gemma-2-9b-it"
 RERANKER_MODEL = "gpt-3.5-turbo" # Reranker model used for actual segment searching
-API_SELECTOR = 'open_router' # 'openai' or 'groq' or 'open_router'
+API_SELECTOR = 'groq' # 'openai' or 'groq' or 'open_router'
 
 # Parameters
 MAX_RERANK_WORKERS = 25 # Max concurrency for search reranking
