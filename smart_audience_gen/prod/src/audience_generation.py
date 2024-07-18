@@ -48,7 +48,7 @@ def generate_audience_segments(company_name, company_description, conversation_h
         ("Rephrasing segments", REPHRASAL_PROMPT, {"company_name": company_name})
     ]
 
-    results, updated_history = process_message_queue(message_queue[:], conversation_history)
+    results, updated_history = process_message_queue(message_queue[:2], conversation_history)
     last_key = list(results.keys())[-1]
     return extract_and_correct_json(results[last_key]), updated_history
 

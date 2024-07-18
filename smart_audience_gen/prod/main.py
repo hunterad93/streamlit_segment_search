@@ -32,12 +32,13 @@ def generate_initial_audience(company_name: str, conversation_history: list) -> 
 
 def handle_user_feedback(audience_json: Dict[str, Any]) -> None:
     """Handle user feedback on the audience segments."""
-    user_feedback = render_user_feedback()
-    if render_button("Apply Feedback"):
+    feedback = render_user_feedback()
+    
+    if feedback and feedback != StateManager.get('last_feedback'):
         with st.spinner("Applying feedback..."):
             StateManager.update(old_audience_json=audience_json)
             updated_json, updated_history = process_user_feedback(
-                user_feedback,
+                feedback,
                 StateManager.get('conversation_history')
             )
             StateManager.update(
@@ -46,11 +47,11 @@ def handle_user_feedback(audience_json: Dict[str, Any]) -> None:
                 summary_results=None,
                 audience_report=None,
                 final_report=None,
-                stage=1
+                stage=1,
+                last_feedback=feedback
             )
         st.success("Feedback applied successfully.")
         st.rerun()
-
 def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
     """Handle the selection of segments by the user."""
     selected_segments = render_segment_selection(audience_json)

@@ -16,6 +16,8 @@ class StateManager:
         st.session_state.use_presearch_filter = False
         st.session_state.session_id = str(uuid.uuid4())
         st.session_state.post_search_results = None
+        st.session_state.last_feedback = ""
+
 
     @staticmethod
     def update(**kwargs):

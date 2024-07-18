@@ -4,10 +4,10 @@ import json
 
 
 def render_company_input():
-    return st.text_input("Enter company name:", "Bubba Burgers")
+    return st.text_input("Enter company name or brief campaign desription:", "Bubba Burgers")
 
 def render_user_feedback():
-    return st.text_area("Provide feedback on the audience segments:", key="user_feedback")
+    return st.text_input("Provide feedback on the audience segments:", key="user_feedback")
 
 def render_apply_feedback_button():
     return st.button("Apply Feedback")
