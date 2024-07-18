@@ -2,7 +2,7 @@
 
 BASIC_SYSTEM_PROMPT = "Be concise and precise."
 
-COMPANY_RESEARCH_PROMPT = "Describe the target audience for {company_name}, focusing on their target customers and market niche."
+COMPANY_RESEARCH_PROMPT = "Describe the target audience for {company_name}, focusing on target customers and market niche."
 
 AUDIENCE_BUILD_PROMPT = """
 I am setting up an advertising campaign for {company_name} whose target audience is described as: {company_description}. When I set up my audiences, which audience segments should I exclude and which should I include? Let's focus on behavioral targeting. Describe a list of audience segments to include and exclude. Make sure to include basic obvious segments that could easily be taken for granted, as well as more nuanced and specific behavioral segments. Don't include the reasoning for why you chose the segments in your response, just the segments. Each segment should be a distinct audience that would be possible to target.
@@ -51,9 +51,9 @@ JSON_AUDIENCE_BUILD_PROMPT = """Excellent, could you now reformat this into a st
 }
 """
 
-INCLUDED_IMPROVING_PROMPT = """Please improve the included segments to better target the intended customers. The best inclusion strategy will target a set of less specific groups who compose the target audience when combined. Provide the updated JSON structure with the improved segments."""
+INCLUDED_IMPROVING_PROMPT = """Please improve the included segments to better target the intended customers. The best inclusion strategy will target a set of less specific groups who compose the target audience when combined. Focus on quality over quantity. Provide the updated JSON structure with the improved segments."""
 
-EXCLUDED_IMPROVING_PROMPT = """Refine the excluded segments for optimal customer targeting. An effective exclusion strategy excludes groups whose intersection represents low-conversion prospects. Avoid describing segments through negation, for example instead of writing 'People who did not show interest in luxury products' write 'Budget shoppers'. Return the updated JSON structure with enhanced exclusion segments."""
+EXCLUDED_IMPROVING_PROMPT = """Refine the excluded segments for optimal customer targeting. An effective exclusion strategy excludes groups whose intersection represents low-conversion prospects. Avoid describing segments through negation, for example instead of writing 'People who did not show interest in luxury products' write 'Budget shoppers'. Focus on quality over quantity. Return the updated JSON structure with enhanced exclusion segments."""
 
 REPHRASAL_PROMPT= """Rephrase the following segment descriptions to align with common audience segments discoverable in major data marketplaces (e.g., Facebook Audience Insights, Google Ads Audience Manager). If they are too complex to rephrase, split them into two simpler segments. Provide the updated JSON structure with the improved segments.
 """
@@ -69,13 +69,13 @@ Please update the audience segments based on the following instructions:
 3. Add new segments to replace the deleted ones, maintaining a similar total number of segments.
 4. Ensure the new segments align with the overall audience profile and the user's apparent preferences.
 
-Please provide the updated audience in the same JSON format as the current audience.
+Please provide the updated audience in the same JSON format as the current audience, included and excluded should both exist, even if empty.
 """
 
 FEEDBACK_PROMPT = """
     User feedback: {user_feedback}
 
-    Please update the audience JSON based on the user's feedback. Describe a plan for implementing the changes, then provide the updated JSON, the outer structure of the JSON should be the same, even if there are empty sections.
+    Please update the audience JSON based on the user's feedback. Describe a plan for implementing the changes, then provide the updated JSON, the outer structure of the JSON should be the same with included and excluded sections, even if they are empty.
     """
 
 DELETE_SEGMENTS_PROMPT = """
