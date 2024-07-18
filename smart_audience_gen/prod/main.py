@@ -12,6 +12,7 @@ from src.audience_search import process_audience_segments, summarize_segments, e
 from src.report_generation import generate_audience_report
 from src.researcher import generate_segment_summaries
 from config.settings import PINECONE_TOP_K
+from config.prompts import REDUCE_PROMPT, EXPAND_PROMPT
 
 def process_audience_data(extracted_json: Dict[str, Any], use_presearch_filter: bool) -> Dict[str, Any]:
     """Process the extracted audience data."""
@@ -52,11 +53,12 @@ def handle_user_feedback(audience_json: Dict[str, Any]) -> None:
             )
         st.success("Feedback applied successfully.")
         st.rerun()
+
 def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
     """Handle the selection of segments by the user."""
     selected_segments = render_segment_selection(audience_json)
     
-    col1, col2 = st.columns(2)
+    col1, col2, col3, col4 = st.columns(4)
     
     with col1:
         if render_button("Delete and Replace Unselected Segments"):
@@ -64,7 +66,7 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                 updated_json, updated_history = update_audience_segments(
                     audience_json,
                     selected_segments,
-                    StateManager.get('conversation_history')  # Use get() method here
+                    StateManager.get('conversation_history')
                 )
                 StateManager.update(
                     old_audience_json=audience_json,
@@ -77,13 +79,14 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                 )
             st.success("Audience segments updated successfully.")
             st.rerun()
+    
     with col2:
         if render_button("Delete Unselected Segments"):
             with st.spinner("Deleting unselected segments..."):
                 updated_json, updated_history = delete_unselected_segments(
                     audience_json, 
                     selected_segments,
-                    StateManager.get('conversation_history')  # Use get() method here
+                    StateManager.get('conversation_history')
                 )
                 StateManager.update(
                     old_audience_json=audience_json,
@@ -95,6 +98,44 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     stage=1
                 )
             st.success("Unselected segments deleted successfully.")
+            st.rerun()
+    
+    with col3:
+        if render_button("Reduce Segments"):
+            with st.spinner("Reducing segments..."):
+                updated_json, updated_history = process_user_feedback(
+                    REDUCE_PROMPT,
+                    StateManager.get('conversation_history')
+                )
+                StateManager.update(
+                    old_audience_json=audience_json,
+                    extracted_audience_json=updated_json,
+                    conversation_history=updated_history,
+                    summary_results=None,
+                    audience_report=None,
+                    final_report=None,
+                    stage=1
+                )
+            st.success("Segments reduced successfully.")
+            st.rerun()
+    
+    with col4:
+        if render_button("Expand Reach"):
+            with st.spinner("Expanding reach..."):
+                updated_json, updated_history = process_user_feedback(
+                    EXPAND_PROMPT,
+                    StateManager.get('conversation_history')
+                )
+                StateManager.update(
+                    old_audience_json=audience_json,
+                    extracted_audience_json=updated_json,
+                    conversation_history=updated_history,
+                    summary_results=None,
+                    audience_report=None,
+                    final_report=None,
+                    stage=1
+                )
+            st.success("Reach expanded successfully.")
             st.rerun()
 
 def process_and_render_segments() -> None:
@@ -147,6 +188,7 @@ def main() -> None:
     if render_button("Generate Audience"):
         StateManager.reset()
         StateManager.update(company_name=new_company_name)
+        st.session_state.user_feedback = ""
         generate_initial_audience(StateManager.get('company_name'), StateManager.get('conversation_history'))
 
     if StateManager.get('stage') >= 1:
