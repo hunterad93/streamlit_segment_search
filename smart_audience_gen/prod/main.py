@@ -185,16 +185,16 @@ def main() -> None:
     
     st.title("Smart Audience Generator")
 
-    try:
+    new_company_name = render_company_input()
+    
+    if render_button("Generate Audience"):
+        StateManager.reset()
+        StateManager.update(company_name=new_company_name)
+        generate_initial_audience(StateManager.get('company_name'), StateManager.get('conversation_history'))
 
-        new_company_name = render_company_input()
-        
-        if render_button("Generate Audience"):
-            StateManager.reset()
-            StateManager.update(company_name=new_company_name)
-            generate_initial_audience(StateManager.get('company_name'), StateManager.get('conversation_history'))
 
-        if StateManager.get('stage') >= 1:
+    if StateManager.get('stage') >= 1:
+        try:
             audience_json = ensure_dict(StateManager.get('extracted_audience_json'))
             handle_segment_selection(audience_json)
             
@@ -202,31 +202,32 @@ def main() -> None:
                 render_json_diff(StateManager.get('old_audience_json'), audience_json)
             
             handle_user_feedback(audience_json)
-            # Add the presearch filter option here
-            use_presearch_filter = render_presearch_filter_option()
-            StateManager.update(use_presearch_filter=use_presearch_filter)
-            
-            if render_button("Search Actual Segments"):
-                StateManager.update(
-                    summary_results=None,
-                    audience_report=None,
-                    final_report=None,
-                    stage=2
-                )
-                st.rerun()
+        except Exception as e:
+            print(f"An error occurred during feedback handling: {str(e)}")
+            st.error(f"An error occurred during feedback handling: {str(e)}")
+            StateManager.restore_backup()
+            st.warning("State is reverting to the last known good state. Try a different command.")
+            time.sleep(5)
+            st.rerun()
 
-        if StateManager.get('stage') >= 2:
-            process_and_render_segments()
+        # Add the presearch filter option here
+        use_presearch_filter = render_presearch_filter_option()
+        StateManager.update(use_presearch_filter=use_presearch_filter)
+        
+        if render_button("Search Actual Segments"):
+            StateManager.update(
+                summary_results=None,
+                audience_report=None,
+                final_report=None,
+                stage=2
+            )
+            st.rerun()
 
-            if render_button("Generate Methodology Report"):
-                generate_methodology_report()
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
-        st.error(f"An error occurred: {str(e)}")
-        StateManager.restore_backup()
-        st.warning("State is reverting to the last known good state. Try a different command.")
-        time.sleep(5)
-        st.rerun()
+    if StateManager.get('stage') >= 2:
+        process_and_render_segments()
+
+        if render_button("Generate Methodology Report"):
+            generate_methodology_report()
 
 if __name__ == "__main__":
     main()
