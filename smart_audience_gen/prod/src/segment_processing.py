@@ -1,14 +1,14 @@
 import re
 from typing import List, Dict
 import concurrent.futures
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception
+from tenacity import retry, stop_after_attempt, wait_exponential
 import pandas as pd
 import streamlit as st
 from config.locations import NON_US_LOCATIONS
 from config.prompts import RERANK_PROMPT
 from config.settings import RERANKER_MODEL, OPEN_ROUTER_RERANK
 
-from .api_clients import openai_client, open_router_client, is_rate_limit_error, before_sleep_show_warning
+from .api_clients import openai_client, open_router_client
 
 def filter_non_us(df: pd.DataFrame) -> pd.DataFrame:
     # Compile the pattern once
@@ -51,9 +51,7 @@ def parse_relevance_score(result: str) -> float:
 
 @retry(
     stop=stop_after_attempt(5),
-    wait=wait_exponential(multiplier=2, min=10, max=60),
-    retry=retry_if_exception(is_rate_limit_error),
-    before_sleep=before_sleep_show_warning
+    wait=wait_exponential(multiplier=2, min=10, max=60)
 )
 def gpt_score_relevance(query: str, doc: str) -> float:
     """

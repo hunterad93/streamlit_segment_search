@@ -65,7 +65,7 @@ def send_api_message(client, messages, model):
         messages=select_context(messages, CONTEXT_LENGTH_START, CONTEXT_LENGTH_END),
         temperature=0.0
     )
-    logger.info(f"API call successful. Status: {response.http_status}")
+    logger.info(f"API call {response}")
     return response.choices[0].message.content
     
 def select_context(history, num_first, num_recent):

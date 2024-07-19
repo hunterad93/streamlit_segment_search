@@ -1,5 +1,6 @@
 import streamlit as st
 import uuid
+import copy
 
 class StateManager:
     @staticmethod
@@ -17,10 +18,15 @@ class StateManager:
         st.session_state.session_id = str(uuid.uuid4())
         st.session_state.post_search_results = None
         st.session_state.last_feedback = ""
+        st.session_state.state_backup = None
+        st.session_state.user_feedback = ""
 
 
     @staticmethod
     def update(**kwargs):
+        # Create a backup before updating
+        StateManager.create_backup()
+        
         for key, value in kwargs.items():
             if key in st.session_state:
                 st.session_state[key] = value
@@ -30,6 +36,24 @@ class StateManager:
     @staticmethod
     def get(attr):
         return st.session_state.get(attr)
+    
+    @staticmethod
+    def create_backup():
+        # Create a deep copy of the current state
+        backup = {key: copy.deepcopy(value) for key, value in st.session_state.items() if key != 'state_backup'}
+        st.session_state.state_backup = backup
+
+    @staticmethod
+    def restore_backup():
+        if st.session_state.state_backup:
+            for key, value in st.session_state.state_backup.items():
+                try:
+                    st.session_state[key] = value
+                except Exception as e:
+                    print(f"Error restoring state for key {key}: {e}")
+            st.session_state.state_backup = None
+        else:
+            st.warning("No backup available to restore.")
 
     @staticmethod
     def increment_stage():
@@ -46,4 +70,3 @@ class StateManager:
         st.session_state.summary_results = None
         st.session_state.audience_report = None
 
-# No need for get_state() function or global state variable
