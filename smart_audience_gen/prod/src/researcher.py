@@ -4,6 +4,7 @@ from config.settings import ONLINE_MODEL, OFFLINE_MODEL
 from config.prompts import ONLINE_SYSTEM_PROMPT, OFFLINE_SYSTEM_PROMPT, SUMMARY_PROMPT, INITIAL_RESEARCH_PROMPT, FOLLOW_UP_PROMPT, CATEGORIZE_SEGMENT_PROMPT, BASIC_SYSTEM_PROMPT
 from src.api_clients import send_perplexity_message
 from src.pinecone_utils import cache_summary, get_cached_summary
+import concurrent.futures
 
 def categorize_segment(segment):
     messages = [{"role": "user", "content": CATEGORIZE_SEGMENT_PROMPT.format(segment=segment)}]
@@ -61,17 +62,21 @@ def create_conversation(domain: str, segment: str, num_iterations: int) -> tuple
     return offline_conversation, summary
 
 def generate_segment_summaries(segments):
-    summaries = []
-    for segment in segments:
-        conversation, summary = create_conversation(segment['BrandName'], segment['raw_string'], num_iterations=3)
-        summaries.append({
-            "raw_string": segment['raw_string'],
-            "brand_name": segment['BrandName'],
+
+    def process_segment(segment):
+        conversation, summary = create_conversation(segment['BrandName'], segment['ActualSegment'], num_iterations=3)
+        return {
+            "ActualSegment": segment['ActualSegment'],
+            "BrandName": segment['BrandName'],
             "summary": summary
-        })
+        }
+
+    with concurrent.futures.ThreadPoolExecutor() as executor:
+        summaries = list(executor.map(process_segment, segments))
+
     return summaries
 
 def generate_methodology_summary(segment_summaries):
-    combined_summaries = "\n\n".join([f"Segment: {s['raw_string']}\nBrand: {s['brand_name']}\nSummary: {s['summary']}" for s in segment_summaries])
+    combined_summaries = "\n\n".join([f"Segment: {s['ActualSegment']}\nBrand: {s['BrandName']}\nSummary: {s['summary']}" for s in segment_summaries])
     
     return combined_summaries

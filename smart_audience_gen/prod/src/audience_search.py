@@ -40,21 +40,35 @@ def process_audience_segments(audience_json, presearch_filter, top_k):
     progress_bar = st.progress(0)
     processed_items = 0
 
-    for category in ['included', 'excluded']:
-        results['Audience'][category] = {}
-        for group, descriptions in audience_json['Audience'][category].items():
-            group_results = []
-            for item in descriptions:
-                query = item['description']
-                relevant_segment = find_first_high_relevance(query, presearch_filter, top_k)
-                group_results.append({
-                    'description': query,
-                    'top_k_segments': relevant_segment.to_dict('records') if not relevant_segment.empty else []
-                })
-                processed_items += 1
-                progress_bar.progress(processed_items / total_items)
-            results['Audience'][category][group] = group_results
-    
+    def process_item(item, category, group):
+        query = item['description']
+        relevant_segment = find_first_high_relevance(query, presearch_filter, top_k)
+        return {
+            'description': query,
+            'ActualSegments': relevant_segment.to_dict('records') if not relevant_segment.empty else [],
+            'category': category,
+            'group': group
+        }
+
+    with ThreadPoolExecutor() as executor:
+        futures = []
+        for category in ['included', 'excluded']:
+            results['Audience'][category] = {}
+            for group, descriptions in audience_json['Audience'][category].items():
+                futures.extend([executor.submit(process_item, item, category, group) for item in descriptions])
+
+        for future in as_completed(futures):
+            result = future.result()
+            category, group = result['category'], result['group']
+            if group not in results['Audience'][category]:
+                results['Audience'][category][group] = []
+            results['Audience'][category][group].append({
+                'description': result['description'],
+                'ActualSegments': result['ActualSegments']
+            })
+            processed_items += 1
+            progress_bar.progress(processed_items / total_items)
+
     progress_bar.empty()  # Remove the progress bar when done
     return results
 
@@ -67,15 +81,15 @@ def summarize_segments(processed_results):
             group_results = []
             for item in descriptions:
                 summarized_segments = []
-                for segment in item['top_k_segments']:
+                for segment in item['ActualSegments']:
                     summarized_segment = {
-                        'raw_string': segment['raw_string'],
+                        'ActualSegment': segment['raw_string'],
                         'BrandName': segment['BrandName']
                     }
                     summarized_segments.append(summarized_segment)
                 group_results.append({
                     'description': item['description'],
-                    'top_k_segments': summarized_segments
+                    'ActualSegments': summarized_segments
                 })
             summary_json['Audience'][category][group] = group_results
     
@@ -96,9 +110,9 @@ def extract_research_inputs(processed_results: Dict) -> List[Dict[str, str]]:
     for category in ['included', 'excluded']:
         for group in processed_results['Audience'][category].values():
             for item in group:
-                for segment in item['top_k_segments']:
+                for segment in item['ActualSegments']:
                     segment_info.append({
-                        'raw_string': segment['raw_string'],
+                        'ActualSegment': segment['ActualSegment'],
                         'BrandName': segment.get('BrandName', '')
                     })
 

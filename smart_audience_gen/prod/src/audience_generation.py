@@ -3,6 +3,8 @@ import json
 from src.api_clients import send_perplexity_message, route_api_call
 from src.data_processing import extract_and_correct_json
 from typing import Dict, Any, List, Tuple
+import streamlit as st
+
 from config.prompts import (
     COMPANY_RESEARCH_PROMPT,
     AUDIENCE_BUILD_PROMPT,
@@ -22,7 +24,7 @@ def process_message_queue(message_queue, conversation_history):
     for step, (prompt_name, prompt, format_args) in enumerate(message_queue, 1):
         formatted_prompt = prompt.format(**format_args) if format_args else prompt
         conversation_history.append({"role": "user", "content": formatted_prompt})
-        
+        st.write(prompt_name)
         response = route_api_call(conversation_history)
         conversation_history.append({"role": "assistant", "content": response})
         
