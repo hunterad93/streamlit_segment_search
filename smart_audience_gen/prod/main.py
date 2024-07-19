@@ -1,5 +1,6 @@
 import streamlit as st
 from typing import Dict, Any
+import time
 
 from src.ui_components import (
     render_company_input, render_json_diff, render_actual_segments,
@@ -34,10 +35,12 @@ def generate_initial_audience(company_name: str, conversation_history: list) -> 
 def handle_user_feedback(audience_json: Dict[str, Any]) -> None:
     """Handle user feedback on the audience segments."""
     feedback = render_user_feedback()
-    
     if feedback and feedback != StateManager.get('last_feedback'):
         with st.spinner("Applying feedback..."):
-            StateManager.update(old_audience_json=audience_json)
+            StateManager.update(
+                old_audience_json=audience_json,
+                last_feedback=feedback
+            )
             updated_json, updated_history = process_user_feedback(
                 feedback,
                 StateManager.get('conversation_history')
@@ -48,8 +51,7 @@ def handle_user_feedback(audience_json: Dict[str, Any]) -> None:
                 summary_results=None,
                 audience_report=None,
                 final_report=None,
-                stage=1,
-                last_feedback=feedback
+                stage=1
             )
         st.success("Feedback applied successfully.")
         st.rerun()
@@ -190,19 +192,16 @@ def main() -> None:
         if render_button("Generate Audience"):
             StateManager.reset()
             StateManager.update(company_name=new_company_name)
-            st.session_state.user_feedback = ""
             generate_initial_audience(StateManager.get('company_name'), StateManager.get('conversation_history'))
 
         if StateManager.get('stage') >= 1:
             audience_json = ensure_dict(StateManager.get('extracted_audience_json'))
-            print(f"audience_json: {audience_json}")
             handle_segment_selection(audience_json)
             
             if StateManager.get('old_audience_json'):
                 render_json_diff(StateManager.get('old_audience_json'), audience_json)
             
             handle_user_feedback(audience_json)
-            print(audience_json)
             # Add the presearch filter option here
             use_presearch_filter = render_presearch_filter_option()
             StateManager.update(use_presearch_filter=use_presearch_filter)
@@ -225,7 +224,8 @@ def main() -> None:
         print(f"An error occurred: {str(e)}")
         st.error(f"An error occurred: {str(e)}")
         StateManager.restore_backup()
-        st.warning("State has been reverted to the last known good state.")
+        st.warning("State is reverting to the last known good state. Try a different command.")
+        time.sleep(5)
         st.rerun()
 
 if __name__ == "__main__":

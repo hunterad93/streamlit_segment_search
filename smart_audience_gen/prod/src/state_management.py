@@ -40,7 +40,7 @@ class StateManager:
     @staticmethod
     def create_backup():
         # Create a deep copy of the current state
-        backup = {key: copy.deepcopy(value) for key, value in st.session_state.items() if key != 'state_backup'}
+        backup = {key: copy.deepcopy(value) for key, value in st.session_state.items() if key != 'state_backup' and key != 'last_feedback'}
         st.session_state.state_backup = backup
 
     @staticmethod

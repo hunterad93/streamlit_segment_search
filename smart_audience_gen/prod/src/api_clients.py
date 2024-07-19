@@ -28,7 +28,7 @@ elif API_SELECTOR == 'open_router':
     model = OPEN_ROUTER_MODEL
 
 @retry(
-    stop=stop_after_attempt(5),
+    stop=stop_after_attempt(2),
     wait=wait_exponential(multiplier=2, min=10, max=60),
     before_sleep=before_sleep_log(logger, logging.INFO)
 )
@@ -55,7 +55,7 @@ def send_perplexity_message(messages, model=ONLINE_MODEL):
         return "Error: Unable to get a response from the API"
 
 @retry(
-    stop=stop_after_attempt(5),
+    stop=stop_after_attempt(2),
     wait=wait_exponential(multiplier=2, min=10, max=60),
     before_sleep=before_sleep_log(logger, logging.INFO)
 )
@@ -63,7 +63,8 @@ def send_api_message(client, messages, model):
     response = client.chat.completions.create(
         model=model,
         messages=select_context(messages, CONTEXT_LENGTH_START, CONTEXT_LENGTH_END),
-        temperature=0.0
+        temperature=0.0,
+        timeout=30
     )
     logger.info(f"API call {response}")
     return response.choices[0].message.content
