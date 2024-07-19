@@ -1,7 +1,7 @@
 import requests
 from openai import OpenAI
 from groq import Groq
-from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception, before_sleep
+from tenacity import retry, stop_after_attempt, wait_exponential, before_sleep_log
 from config.settings import ONLINE_MODEL, PPLX_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, OPEN_ROUTER_KEY, OPENAI_MODEL, OPEN_ROUTER_MODEL, GROQ_MODEL, CONTEXT_LENGTH_START, CONTEXT_LENGTH_END, API_SELECTOR
 from config.prompts import BASIC_SYSTEM_PROMPT
 import logging
@@ -27,25 +27,10 @@ elif API_SELECTOR == 'open_router':
     client = open_router_client
     model = OPEN_ROUTER_MODEL
 
-def is_rate_limit_error(exception):
-    return isinstance(exception, requests.exceptions.HTTPError) and exception.response.status_code == 429
-
-def show_retry_warning(retry_state):
-    exception = retry_state.outcome.exception()
-    if is_rate_limit_error(exception):
-        message = (f"Rate limit hit. Retrying in {retry_state.next_action.sleep:.2f} seconds. "
-                   f"Attempt {retry_state.attempt_number} of {retry_state.stop.max_attempt_number}")
-        st.warning(message)
-
-def before_sleep_show_warning(retry_state):
-    show_retry_warning(retry_state)
-
-
 @retry(
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=2, min=10, max=60),
-    retry=retry_if_exception(is_rate_limit_error),
-    before_sleep=before_sleep_show_warning
+    before_sleep=before_sleep_log(logger, logging.INFO)
 )
 def send_perplexity_message(messages, model=ONLINE_MODEL):
     url = "https://api.perplexity.ai/chat/completions"
@@ -72,29 +57,16 @@ def send_perplexity_message(messages, model=ONLINE_MODEL):
 @retry(
     stop=stop_after_attempt(5),
     wait=wait_exponential(multiplier=2, min=10, max=60),
-    retry=retry_if_exception(is_rate_limit_error),
-    before_sleep=before_sleep_show_warning
+    before_sleep=before_sleep_log(logger, logging.INFO)
 )
 def send_api_message(client, messages, model):
-    try:
-        response = client.chat.completions.create(
-            model=model,
-            messages=select_context(messages, CONTEXT_LENGTH_START, CONTEXT_LENGTH_END),
-            temperature=0.0
-        )
-        return response.choices[0].message.content
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code == 429:
-            st.warning(f"Rate limit error occurred: {str(e)}")
-            raise  # Re-raise the exception to trigger the retry
-        else:
-            error_message = f"HTTP error occurred: {str(e)}"
-            st.error(error_message)
-            return error_message
-    except Exception as e:
-        error_message = f"Error: Unable to get a response from the API. {str(e)}"
-        st.error(error_message)
-        return error_message
+    response = client.chat.completions.create(
+        model=model,
+        messages=select_context(messages, CONTEXT_LENGTH_START, CONTEXT_LENGTH_END),
+        temperature=0.0
+    )
+    logger.info(f"API call successful. Status: {response.http_status}")
+    return response.choices[0].message.content
     
 def select_context(history, num_first, num_recent):
     if len(history) <= num_first + num_recent:
