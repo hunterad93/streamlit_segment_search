@@ -187,7 +187,21 @@ def main() -> None:
     new_company_name = render_company_input()
     
     if render_button("Generate Audience"):
-        StateManager.reset()
+        StateManager.update(
+            stage=0,
+            company_name="",
+            extracted_audience_json=None,
+            old_audience_json=None,
+            conversation_history=[],
+            user_comment="",
+            summary_results=None,
+            audience_report=None,
+            final_report=None,
+            use_presearch_filter=False,
+            post_search_results=None,
+            state_backup=None,
+            user_feedback=""
+        )
         StateManager.update(company_name=new_company_name)
         generate_initial_audience(StateManager.get('company_name'), StateManager.get('conversation_history'))
 
