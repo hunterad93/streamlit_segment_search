@@ -5,7 +5,7 @@ import time
 from src.ui_components import (
     render_company_input, render_json_diff, render_actual_segments,
     render_audience_report, render_button, render_user_feedback,
-    render_segment_selection, render_presearch_filter_option)
+    render_segment_selection, render_presearch_filter_option, render_segment_details)
 from src.state_management import StateManager
 from src.data_processing import ensure_dict
 from src.audience_generation import generate_audience, process_user_feedback, update_audience_segments, delete_unselected_segments
@@ -145,12 +145,11 @@ def process_and_render_segments() -> None:
     use_presearch_filter = StateManager.get('use_presearch_filter')
     
     with st.spinner("Processing audience segments..."):
-        if not StateManager.get('post_search_results'):
-            post_search_results = process_audience_data(
-                ensure_dict(StateManager.get('extracted_audience_json')),
-                use_presearch_filter
-            )
-            StateManager.update(post_search_results=post_search_results)
+        post_search_results = process_audience_data(
+            ensure_dict(StateManager.get('extracted_audience_json')),
+            use_presearch_filter
+        )
+        StateManager.update(post_search_results=post_search_results)
     
     render_actual_segments(StateManager.get('post_search_results'))
     
@@ -173,7 +172,7 @@ def generate_methodology_report() -> None:
     with st.spinner("Generating data collection methodology summaries..."):
         segments = extract_research_inputs(StateManager.get('post_search_results'))
         segment_summaries = generate_segment_summaries(segments)
-        st.json(segment_summaries)
+        render_segment_details(segment_summaries)
 
 def main() -> None:
     """Main function to run the Streamlit app."""

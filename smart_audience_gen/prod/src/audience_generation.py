@@ -25,7 +25,7 @@ def process_message_queue(message_queue, conversation_history):
         formatted_prompt = prompt.format(**format_args) if format_args else prompt
         conversation_history.append({"role": "user", "content": formatted_prompt})
         st.write(prompt_name)
-        response = route_api_call(conversation_history)
+        response = route_api_call('openai', conversation_history)
         conversation_history.append({"role": "assistant", "content": response})
         
         results[prompt_name] = response
@@ -64,7 +64,7 @@ def process_user_feedback(user_feedback, conversation_history):
     prompt = FEEDBACK_PROMPT.format(user_feedback=user_feedback)
     
     conversation_history.append({"role": "user", "content": prompt})
-    response = route_api_call(conversation_history)
+    response = route_api_call('openai', conversation_history)
     conversation_history.append({"role": "assistant", "content": response})
     
     updated_json = extract_and_correct_json(response)
@@ -90,7 +90,7 @@ def update_audience_segments(
     prompt = format_update_prompt(segments_to_remove)
     
     conversation_history.append({"role": "user", "content": prompt})
-    llm_response = route_api_call(conversation_history)
+    llm_response = route_api_call('openai', conversation_history)
     conversation_history.append({"role": "assistant", "content": llm_response})
     
     updated_audience = extract_and_correct_json(llm_response)

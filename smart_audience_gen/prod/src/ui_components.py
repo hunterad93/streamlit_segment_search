@@ -118,3 +118,26 @@ def render_json_diff(old_json, new_json):
         with st.expander(f"Changed Segments ({len(diff['changed'])})", expanded=False):
             for item in diff["changed"]:
                 st.markdown(f"- {item}")
+
+def render_segment_details(segments):
+    st.subheader("Segment Details")
+    
+    for segment in segments:
+        with st.expander(f"**{segment['BrandName']}** Segment", expanded=True):
+            display_segment_detail(segment)
+
+def display_segment_detail(segment):
+    full_segment = segment.get("ActualSegment", "")
+    
+    full_path_match = re.search(r"Full Path: (.+?),", full_segment)
+    full_path = full_path_match.group(1) if full_path_match else "N/A"
+    
+    description_match = re.search(r"Description: (.+)$", full_segment)
+    description = description_match.group(1) if description_match else "N/A"
+    
+    st.markdown(f"**Brand Name:** {segment['BrandName']}")
+    st.markdown(f"**Full Path:** {full_path}")
+    st.markdown(f"**Description:** {description}")
+    st.markdown("**Summary:**")
+    st.markdown(segment.get('summary', 'N/A'))
+    st.markdown("---")
