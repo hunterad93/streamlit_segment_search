@@ -15,7 +15,7 @@ def generate_audience_report(summary_json, company_name, conversation_history):
     conversation_history.append({"role": "user", "content": formatted_report_prompt})
 
     # Send the message to the LLM
-    audience_report = route_api_call(conversation_history)
+    audience_report = route_api_call('openai', conversation_history)
 
     # Add the LLM's response to the conversation history
     conversation_history.append({"role": "assistant", "content": audience_report})

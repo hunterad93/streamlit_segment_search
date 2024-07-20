@@ -1,6 +1,7 @@
 import streamlit as st
 from src.ui_utils import get_json_diff
 import json
+import re
 
 
 def render_company_input():
@@ -12,9 +13,36 @@ def render_user_feedback():
 def render_apply_feedback_button():
     return st.button("Apply Feedback")
 
+def display_actual_segment(actual_segment):
+    brand_name = actual_segment.get("BrandName", "N/A")
+    full_segment = actual_segment.get("ActualSegment", "")
+    
+    full_path_match = re.search(r"Full Path: (.+?),", full_segment)
+    full_path = full_path_match.group(1) if full_path_match else "N/A"
+    
+    description_match = re.search(r"Description: (.+)$", full_segment)
+    description = description_match.group(1) if description_match else "N/A"
+    
+    st.markdown(f"  - **Brand Name:** {brand_name}")
+    st.markdown(f"  - **Full Path:** {full_path}")
+    st.markdown(f"  - **Description:** {description}")
+    st.markdown("---")
+
 def render_actual_segments(data):
     st.subheader("Actual Segments")
-    st.json(data)
+    audience = data.get("Audience", {})
+    
+    col1, col2 = st.columns(2)
+    
+    for i, section in enumerate(["included", "excluded"]):
+        with col1 if i == 0 else col2:
+            st.markdown(f"### {section.capitalize()}")
+            for category, segments in audience.get(section, {}).items():
+                with st.expander(f"**{category}** ({len(segments)} segments)", expanded=True):
+                    for segment in segments:
+                        st.markdown(f"- **{segment['description']}**")
+                        for actual_segment in segment.get("ActualSegments", []):
+                            display_actual_segment(actual_segment)
 
 def render_audience_report(report):
     st.subheader("Audience Report")

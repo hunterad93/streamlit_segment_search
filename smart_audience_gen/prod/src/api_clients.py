@@ -5,7 +5,6 @@ from tenacity import retry, stop_after_attempt, wait_exponential, before_sleep_l
 from config.settings import ONLINE_MODEL, PPLX_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, OPEN_ROUTER_KEY, OPENAI_MODEL, OPEN_ROUTER_MODEL, GROQ_MODEL, CONTEXT_LENGTH_START, CONTEXT_LENGTH_END, API_SELECTOR
 from config.prompts import BASIC_SYSTEM_PROMPT
 import logging
-import streamlit as st
 
 logger = logging.getLogger(__name__)
 
@@ -16,16 +15,6 @@ open_router_client = client = OpenAI(
   base_url="https://openrouter.ai/api/v1",
   api_key=OPEN_ROUTER_KEY,
 )
-
-if API_SELECTOR == 'openai':
-    client = openai_client
-    model = OPENAI_MODEL
-elif API_SELECTOR == 'groq':
-    client = groq_client
-    model = GROQ_MODEL
-elif API_SELECTOR == 'open_router':
-    client = open_router_client
-    model = OPEN_ROUTER_MODEL
 
 @retry(
     stop=stop_after_attempt(2),
@@ -75,5 +64,10 @@ def select_context(history, num_first, num_recent):
     print('history length' + str(len(history)))
     return history[:num_first] + history[-(num_recent):]
 
-def route_api_call(messages, model=model):
-    return send_api_message(client, messages, model)
+def route_api_call(api_selector = API_SELECTOR, messages = []):
+    if api_selector == 'openai':
+        return send_api_message(openai_client, messages, OPENAI_MODEL)
+    elif api_selector == 'groq':
+        return send_api_message(groq_client, messages, GROQ_MODEL)
+    elif api_selector == 'open_router':
+        return send_api_message(open_router_client, messages, OPEN_ROUTER_MODEL)
