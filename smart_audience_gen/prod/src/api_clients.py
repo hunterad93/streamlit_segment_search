@@ -44,8 +44,8 @@ def send_perplexity_message(messages, model=ONLINE_MODEL):
         raise Exception("Error: Unable to get a response from the API")
 
 @retry(
-    stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=2, min=10, max=60),
+    stop=stop_after_attempt(4),
+    wait=wait_exponential(multiplier=2, min=30, max=200),
     before_sleep=before_sleep_log(logger, logging.INFO)
 )
 def send_api_message(client, messages, model):
