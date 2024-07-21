@@ -188,14 +188,13 @@ def process_and_render_segments() -> None:
     
     if not StateManager.get('audience_report'):
         with st.spinner("Generating audience report..."):
-            audience_report, updated_history = generate_audience_report(
+            audience_report = generate_audience_report(
                 StateManager.get('post_search_results'), 
                 StateManager.get('company_name'), 
                 StateManager.get('conversation_history')
             )
             StateManager.update(
-                audience_report=audience_report,
-                conversation_history=updated_history
+                audience_report=audience_report
             )
     
     render_audience_report(StateManager.get('audience_report'))
@@ -241,13 +240,12 @@ def main() -> None:
 
     if StateManager.get('stage') >= 1:
         try:
-            audience_json = ensure_dict(StateManager.get('extracted_audience_json'))
-            handle_segment_selection(audience_json)
+            handle_segment_selection(ensure_dict(StateManager.get('extracted_audience_json')))
             
             if StateManager.get('old_audience_json'):
-                render_json_diff(StateManager.get('old_audience_json'), audience_json)
+                render_json_diff(StateManager.get('old_audience_json'), ensure_dict(StateManager.get('extracted_audience_json')))
             
-            handle_user_feedback(audience_json)
+            handle_user_feedback(ensure_dict(StateManager.get('extracted_audience_json')))
         except Exception as e:
             print(f"An error occurred during feedback handling: {str(e)}")
             st.error(f"An error occurred during feedback handling: {str(e)}")
