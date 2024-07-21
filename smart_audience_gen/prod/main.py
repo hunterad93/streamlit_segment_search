@@ -48,6 +48,7 @@ def handle_user_feedback(audience_json: Dict[str, Any]) -> None:
             StateManager.update(
                 extracted_audience_json=updated_json,
                 conversation_history=updated_history,
+                post_search_results=None,
                 summary_results=None,
                 audience_report=None,
                 final_report=None,
@@ -74,6 +75,7 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     old_audience_json=audience_json,
                     extracted_audience_json=updated_json,
                     conversation_history=updated_history,
+                    post_search_results=None,
                     summary_results=None,
                     audience_report=None,
                     final_report=None,
@@ -94,6 +96,7 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     old_audience_json=audience_json,
                     extracted_audience_json=updated_json,
                     conversation_history=updated_history,
+                    post_search_results=None,
                     summary_results=None,
                     audience_report=None,
                     final_report=None,
@@ -113,6 +116,7 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     old_audience_json=audience_json,
                     extracted_audience_json=updated_json,
                     conversation_history=updated_history,
+                    post_search_results=None,
                     summary_results=None,
                     audience_report=None,
                     final_report=None,
@@ -132,6 +136,7 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     old_audience_json=audience_json,
                     extracted_audience_json=updated_json,
                     conversation_history=updated_history,
+                    post_search_results=None,
                     summary_results=None,
                     audience_report=None,
                     final_report=None,
@@ -141,17 +146,19 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
             st.rerun()
 
 def process_and_render_segments() -> None:
-    """Process and render the audience segments."""
-    use_presearch_filter = StateManager.get('use_presearch_filter')
-    
-    with st.spinner("Processing audience segments..."):
-        post_search_results = process_audience_data(
-            ensure_dict(StateManager.get('extracted_audience_json')),
-            use_presearch_filter
-        )
-        StateManager.update(post_search_results=post_search_results)
+    if StateManager.get('post_search_results') is None:
+        """Process and render the audience segments."""
+        use_presearch_filter = StateManager.get('use_presearch_filter')
+        
+        with st.spinner("Processing audience segments..."):
+            post_search_results = process_audience_data(
+                ensure_dict(StateManager.get('extracted_audience_json')),
+                use_presearch_filter
+            )
+            StateManager.update(post_search_results=post_search_results)
     
     render_actual_segments(StateManager.get('post_search_results'))
+    
     
     if not StateManager.get('audience_report'):
         with st.spinner("Generating audience report..."):
@@ -223,9 +230,13 @@ def main() -> None:
             time.sleep(5)
             st.rerun()
 
-        # Add the presearch filter option here
         use_presearch_filter = render_presearch_filter_option()
-        StateManager.update(use_presearch_filter=use_presearch_filter)
+        if use_presearch_filter != StateManager.get('use_presearch_filter'):
+            StateManager.update(
+                use_presearch_filter=use_presearch_filter,
+                post_search_results=None
+            )
+
         
         if render_button("Search Actual Segments"):
             StateManager.update(

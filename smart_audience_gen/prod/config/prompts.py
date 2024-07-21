@@ -5,7 +5,7 @@ BASIC_SYSTEM_PROMPT = "Be concise and precise."
 COMPANY_RESEARCH_PROMPT = "Describe the target audience for {company_name}, focusing on target customers and market niche."
 
 AUDIENCE_BUILD_PROMPT = """
-I am setting up an advertising campaign for {company_name} whose target audience is described as: {company_description}. When I set up my audiences, which audience segments should I exclude and which should I include? Let's focus on behavioral targeting. Describe a list of audience segments to include and exclude. Make sure to include basic obvious segments that could easily be taken for granted, as well as more nuanced and specific behavioral segments. Don't include the reasoning for why you chose the segments in your response, just the segments. Each segment should be a distinct audience that would be possible to target.
+I am setting up an advertising campaign for {company_name} whose target audience is described as: {company_description}. When I set up my audiences, which audience segments should I exclude and which should I include? Let's focus on behavioral targeting. Describe a list of audience segments to include and exclude. Make sure to include basic obvious segments that could easily be taken for granted, as well as more nuanced and specific behavioral segments. Don't include the reasoning for why you chose the segments in your response, just the segments. Each segment should be as close as possible to an actual segment that could be found in a data marketplace.
 """
 
 JSON_AUDIENCE_BUILD_PROMPT = """Excellent, could you now reformat this into a structured JSON output, in this form:
@@ -55,7 +55,7 @@ INCLUDED_IMPROVING_PROMPT = """Please improve the included segments to better ta
 
 EXCLUDED_IMPROVING_PROMPT = """Refine the excluded segments for optimal customer targeting. An effective exclusion strategy excludes groups whose intersection represents low-conversion prospects. Avoid describing segments through negation, for example instead of writing 'People who did not show interest in luxury products' write 'Budget shoppers'. Focus on quality over quantity. Return the updated JSON structure with enhanced exclusion segments."""
 
-REPHRASAL_PROMPT= """Rephrase the following segment descriptions to align with common audience segments discoverable in major data marketplaces (e.g., Facebook Audience Insights, Google Ads Audience Manager). If they are too complex to rephrase, split them into two simpler segments. Provide the updated JSON structure with the improved segments.
+REPHRASAL_PROMPT= """Rephrase the following segment descriptions to align with common audience segments discoverable in major data marketplaces (e.g., Facebook Audience Insights, Google Ads Audience Manager). If they are too complex to rephrase, split them into two simpler segments. Each segment should refer to a single behavior or trait. Provide the updated JSON structure with the improved segments.
 """
 
 
