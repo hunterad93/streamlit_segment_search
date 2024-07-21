@@ -7,9 +7,10 @@ from .data_processing import results_to_dataframe
 from .embedding import generate_embedding
 from .pinecone_utils import query_pinecone
 from .segment_processing import process_single_segment, filter_non_us
-from config.settings import RELEVANCE_THRESHOLD, MAX_RERANK_WORKERS
+from config.settings import RELEVANCE_THRESHOLD, MAX_RERANK_WORKERS, SECONDARY_RELEVANCE_THRESHOLD
 
-def find_first_high_relevance(query: str, presearch_filter: dict, top_k: int) -> pd.DataFrame:
+
+def find_relevant_segments(query: str, presearch_filter: dict, top_k: int) -> pd.DataFrame:
     query_embedding = generate_embedding(query)
     query_results = query_pinecone(query_embedding, top_k, presearch_filter)
     df = results_to_dataframe(query_results)
@@ -17,19 +18,33 @@ def find_first_high_relevance(query: str, presearch_filter: dict, top_k: int) ->
     df = df.sort_values(['vector_score', 'CPMRateInAdvertiserCurrency_Amount', 'UniqueUserCount'], 
                        ascending=[False, True, False]).reset_index(drop=True)
 
+    processed_segments = []
     segments_searched = 0
+
     with ThreadPoolExecutor(max_workers=MAX_RERANK_WORKERS) as executor:
         futures = [executor.submit(process_single_segment, query, segment) for segment in df.to_dict('records')]
         
         for future in as_completed(futures):
             processed_segment = future.result()
+            processed_segments.append(processed_segment)
             segments_searched += 1
+            
             if processed_segment['relevance_score'] >= RELEVANCE_THRESHOLD:
                 executor.shutdown(wait=False, cancel_futures=True)
                 print(f"Found high-relevance segment after searching {segments_searched} segments")
                 return pd.DataFrame([processed_segment])
     
     print(f"No high-relevance segment found after searching {segments_searched} segments")
+    
+    # If no high-relevance segments found, return top 3 segments above secondary threshold
+    secondary_segments = [s for s in processed_segments if s['relevance_score'] >= SECONDARY_RELEVANCE_THRESHOLD]
+    secondary_segments.sort(key=lambda x: x['relevance_score'], reverse=True)
+    top_3_secondary = secondary_segments[:3]
+    
+    if top_3_secondary:
+        print(f"Returning top {len(top_3_secondary)} segments above secondary threshold")
+        return pd.DataFrame(top_3_secondary)
+    
     return pd.DataFrame()  # Return empty DataFrame if no high-relevance segment found
 
 def process_audience_segments(audience_json, presearch_filter, top_k):
@@ -42,7 +57,7 @@ def process_audience_segments(audience_json, presearch_filter, top_k):
 
     def process_item(item, category, group):
         query = item['description']
-        relevant_segment = find_first_high_relevance(query, presearch_filter, top_k)
+        relevant_segment = find_relevant_segments(query, presearch_filter, top_k)
         return {
             'description': query,
             'ActualSegments': relevant_segment.to_dict('records') if not relevant_segment.empty else [],

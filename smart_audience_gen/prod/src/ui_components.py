@@ -38,7 +38,9 @@ def render_actual_segments(data):
         with col1 if i == 0 else col2:
             st.markdown(f"### {section.capitalize()}")
             for category, segments in audience.get(section, {}).items():
-                with st.expander(f"**{category}** ({len(segments)} segments)", expanded=False):
+                # Count the total number of ActualSegments
+                total_actual_segments = sum(len(segment.get("ActualSegments", [])) for segment in segments)
+                with st.expander(f"**{category}** ({total_actual_segments} segments)", expanded=False):
                     for segment in segments:
                         st.markdown(f"- **{segment['description']}**")
                         for actual_segment in segment.get("ActualSegments", []):

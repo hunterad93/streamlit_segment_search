@@ -16,6 +16,7 @@ API_SELECTOR = 'openai' # 'openai' or 'groq' or 'open_router'
 # Parameters
 MAX_RERANK_WORKERS = 25 # Max concurrency for search reranking
 RELEVANCE_THRESHOLD = .9 # Relevance threshold for search reranking
+SECONDARY_RELEVANCE_THRESHOLD = .85 # Secondary relevance threshold for search reranking
 RERANK_TOP_K = 3 
 FALLBACK_TOP_K = 0
 PINECONE_TOP_K = 300
