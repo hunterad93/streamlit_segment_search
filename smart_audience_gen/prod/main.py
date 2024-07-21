@@ -150,7 +150,7 @@ def process_and_render_segments() -> None:
         """Process and render the audience segments."""
         use_presearch_filter = StateManager.get('use_presearch_filter')
         
-        with st.spinner("Processing audience segments..."):
+        with st.spinner("Searching across 504,311 audience segments for best matches..."):
             post_search_results = process_audience_data(
                 ensure_dict(StateManager.get('extracted_audience_json')),
                 use_presearch_filter
