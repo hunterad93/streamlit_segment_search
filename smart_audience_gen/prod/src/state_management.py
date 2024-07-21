@@ -32,6 +32,20 @@ class StateManager:
                 st.session_state[key] = value
             else:
                 raise AttributeError(f"State has no attribute '{key}'")
+        
+        # Save full state as JSON debugging
+        # import json
+        # from datetime import datetime
+        # import os
+
+        # timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+        # filename = f"state_{timestamp}.json"
+        # filepath = os.path.join("/Users/adamhunter/Documents/streamlit_segment_search/json_artifacts", filename)
+        
+        # state_dict = {key: value for key, value in st.session_state.items() if key != 'state_backup'}
+        
+        # with open(filepath, 'w') as f:
+        #     json.dump(state_dict, f, indent=2, default=str)
 
     @staticmethod
     def get(attr):
