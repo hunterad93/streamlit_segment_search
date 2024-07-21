@@ -58,28 +58,23 @@ def gpt_score_relevance(query: str, doc: str) -> float:
     Score the relevance of a document to the query using GPT-3.5.
     Returns a relevance score between 0 and 1.
     """
-    try:
-        formatted_rerank_prompt = RERANK_PROMPT.format(
-            query=query,
-            doc=doc
-        )
-        response = open_router_client.chat.completions.create(
-            model=OPEN_ROUTER_RERANK,
-            messages=[{"role": "user", "content": formatted_rerank_prompt}],
-            max_tokens=100,
-            temperature=0
-        )
 
-        result = response.choices[0].message.content.strip()
-        return parse_relevance_score(result)
-    except Exception as e:
-        if is_rate_limit_error(e):
-            st.warning(f"Rate limit error occurred: {str(e)}")
-            raise  # Re-raise to trigger retry
-        else:
-            error_message = f"Error in gpt_score_relevance: {str(e)}"
-            st.error(error_message)
-            return 0  # Return 0 score on error
+    formatted_rerank_prompt = RERANK_PROMPT.format(
+        query=query,
+        doc=doc
+    )
+    response = openai_client.chat.completions.create(
+        model=RERANKER_MODEL,
+        messages=[{"role": "user", "content": formatted_rerank_prompt}],
+        max_tokens=100,
+        temperature=0
+    )
+    
+    if not response.choices or len(response.choices) == 0:
+        raise Exception("Error: Unable to get a response from the API")
+    
+    result = response.choices[0].message.content.strip()
+    return parse_relevance_score(result)
 
 def process_single_segment(query: str, segment: Dict) -> Dict:
     """Process a single segment."""

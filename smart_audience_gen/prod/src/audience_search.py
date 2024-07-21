@@ -50,7 +50,7 @@ def process_audience_segments(audience_json, presearch_filter, top_k):
             'group': group
         }
 
-    with ThreadPoolExecutor() as executor:
+    with ThreadPoolExecutor(max_workers=5) as executor:
         futures = []
         for category in ['included', 'excluded']:
             results['Audience'][category] = {}

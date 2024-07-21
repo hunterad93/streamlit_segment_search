@@ -15,6 +15,27 @@ from src.researcher import generate_segment_summaries
 from config.settings import PINECONE_TOP_K
 from config.prompts import REDUCE_PROMPT, EXPAND_PROMPT
 
+def validate_audience_segments(json_data: Dict[str, Any]) -> bool:
+    """
+    Validate the number of segments in the audience JSON.
+    Returns True if valid, False if invalid and state is reverted.
+    """
+    description_count = str(json_data).lower().count('"description":')
+    
+    if description_count > 60:
+        st.warning("Too many segments generated. Reverting to previous state.")
+        StateManager.restore_backup()
+        time.sleep(3)
+        st.rerun()
+        return False
+    elif description_count < 2:
+        st.warning("Not enough segments generated. Reverting to previous state.")
+        StateManager.restore_backup()
+        time.sleep(3)
+        st.rerun()
+        return False
+    return True
+
 def process_audience_data(extracted_json: Dict[str, Any], use_presearch_filter: bool) -> Dict[str, Any]:
     """Process the extracted audience data."""
     presearch_filter = {"BrandName": "Data Alliance"} if use_presearch_filter else {}
@@ -38,7 +59,6 @@ def handle_user_feedback(audience_json: Dict[str, Any]) -> None:
     if feedback and feedback != StateManager.get('last_feedback'):
         with st.spinner("Applying feedback..."):
             StateManager.update(
-                old_audience_json=audience_json,
                 last_feedback=feedback
             )
             updated_json, updated_history = process_user_feedback(
@@ -46,6 +66,7 @@ def handle_user_feedback(audience_json: Dict[str, Any]) -> None:
                 StateManager.get('conversation_history')
             )
             StateManager.update(
+                old_audience_json=audience_json,
                 extracted_audience_json=updated_json,
                 conversation_history=updated_history,
                 post_search_results=None,
@@ -54,8 +75,9 @@ def handle_user_feedback(audience_json: Dict[str, Any]) -> None:
                 final_report=None,
                 stage=1
             )
-        st.success("Feedback applied successfully.")
-        st.rerun()
+            if validate_audience_segments(updated_json):
+                st.success("Feedback applied successfully.")
+                st.rerun()
 
 def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
     """Handle the selection of segments by the user."""
@@ -81,8 +103,9 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     final_report=None,
                     stage=1
                 )
-            st.success("Audience segments updated successfully.")
-            st.rerun()
+                if validate_audience_segments(updated_json):
+                    st.success("Audience segments updated successfully.")
+                    st.rerun()
     
     with col2:
         if render_button("Delete Unselected Segments"):
@@ -102,8 +125,9 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     final_report=None,
                     stage=1
                 )
-            st.success("Unselected segments deleted successfully.")
-            st.rerun()
+                if validate_audience_segments(updated_json):
+                    st.success("Unselected segments deleted successfully.")
+                    st.rerun()
     
     with col3:
         if render_button("Reduce Segments"):
@@ -122,8 +146,9 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     final_report=None,
                     stage=1
                 )
-            st.success("Segments reduced successfully.")
-            st.rerun()
+                if validate_audience_segments(updated_json):
+                    st.success("Segments reduced successfully.")
+                    st.rerun()
     
     with col4:
         if render_button("Expand Reach"):
@@ -142,8 +167,9 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     final_report=None,
                     stage=1
                 )
-            st.success("Reach expanded successfully.")
-            st.rerun()
+                if validate_audience_segments(updated_json):
+                    st.success("Reach expanded successfully.")
+                    st.rerun()
 
 def process_and_render_segments() -> None:
     if StateManager.get('post_search_results') is None:
@@ -226,7 +252,7 @@ def main() -> None:
             print(f"An error occurred during feedback handling: {str(e)}")
             st.error(f"An error occurred during feedback handling: {str(e)}")
             StateManager.restore_backup()
-            st.warning("State is reverting to the last known good state. Try a different command.")
+            st.warning("State is reverting to the last known valid state. Try a different command.")
             time.sleep(5)
             st.rerun()
 

@@ -38,7 +38,7 @@ def render_actual_segments(data):
         with col1 if i == 0 else col2:
             st.markdown(f"### {section.capitalize()}")
             for category, segments in audience.get(section, {}).items():
-                with st.expander(f"**{category}** ({len(segments)} segments)", expanded=True):
+                with st.expander(f"**{category}** ({len(segments)} segments)", expanded=False):
                     for segment in segments:
                         st.markdown(f"- **{segment['description']}**")
                         for actual_segment in segment.get("ActualSegments", []):
@@ -123,7 +123,7 @@ def render_segment_details(segments):
     st.subheader("Segment Details")
     
     for segment in segments:
-        with st.expander(f"**{segment['BrandName']}** Segment", expanded=True):
+        with st.expander(f"**{segment['BrandName']}** Segment", expanded=False):
             display_segment_detail(segment)
 
 def display_segment_detail(segment):

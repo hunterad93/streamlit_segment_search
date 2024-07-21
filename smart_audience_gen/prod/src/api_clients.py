@@ -18,7 +18,7 @@ open_router_client = client = OpenAI(
 
 @retry(
     stop=stop_after_attempt(3),
-    wait=wait_exponential(multiplier=2, min=10, max=60),
+    wait=wait_exponential(multiplier=2, min=30, max=200),
     before_sleep=before_sleep_log(logger, logging.INFO)
 )
 def send_perplexity_message(messages, model=ONLINE_MODEL):
@@ -41,7 +41,7 @@ def send_perplexity_message(messages, model=ONLINE_MODEL):
     if 'choices' in response_data and len(response_data['choices']) > 0:
         return response_data['choices'][0]['message']['content']
     else:
-        return "Error: Unable to get a response from the API"
+        raise Exception("Error: Unable to get a response from the API")
 
 @retry(
     stop=stop_after_attempt(3),
@@ -56,7 +56,11 @@ def send_api_message(client, messages, model):
         timeout=30
     )
     logger.info(f"API call {response}")
-    return response.choices[0].message.content
+    
+    if response.choices and len(response.choices) > 0:
+        return response.choices[0].message.content
+    else:
+        raise Exception("Error: Unable to get a response from the API")
     
 def select_context(history, num_first, num_recent):
     if len(history) <= num_first + num_recent:

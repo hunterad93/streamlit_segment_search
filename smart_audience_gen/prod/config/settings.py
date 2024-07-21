@@ -18,7 +18,7 @@ MAX_RERANK_WORKERS = 25 # Max concurrency for search reranking
 RELEVANCE_THRESHOLD = .9 # Relevance threshold for search reranking
 RERANK_TOP_K = 3 
 FALLBACK_TOP_K = 0
-PINECONE_TOP_K = 500
+PINECONE_TOP_K = 300
 CONTEXT_LENGTH_START = 2 # Number of messages to pass from beginning of conversation
 CONTEXT_LENGTH_END = 8 # Number of messages to pass from end of conversation
 
