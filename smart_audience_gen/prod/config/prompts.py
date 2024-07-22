@@ -163,7 +163,7 @@ Given the following summarized audience segment data, create an executive summar
 {summary_json}
 
 Please summarize the audience targeting strategy in our {company_name} campaign, briefly
-explaining who is being included and who is being excluded from the audience.
+explaining who is being included and who is being excluded from the audience. Keep the summary short and high level.
 """
 
 
