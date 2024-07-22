@@ -1,6 +1,8 @@
 import streamlit as st
 from typing import Dict, Any
 import time
+import json
+
 
 from src.ui_components import (
     render_company_input, render_json_diff, render_actual_segments,
@@ -20,7 +22,15 @@ def validate_audience_segments(json_data: Dict[str, Any]) -> bool:
     Validate the number of segments in the audience JSON.
     Returns True if valid, False if invalid and state is reverted.
     """
-    description_count = str(json_data).lower().count('"description":')
+    
+    # Convert to string if it's not already
+    if not isinstance(json_data, str):
+        json_str = json.dumps(json_data)
+    else:
+        json_str = json_data
+
+    
+    description_count = json_str.lower().count('"description":')
     
     if description_count > 60:
         st.warning("Too many segments generated. Reverting to previous state.")
@@ -75,7 +85,7 @@ def handle_user_feedback(audience_json: Dict[str, Any]) -> None:
                 final_report=None,
                 stage=1
             )
-            if validate_audience_segments(updated_json):
+            if validate_audience_segments(ensure_dict(updated_json)):
                 st.success("Feedback applied successfully.")
                 st.rerun()
 
@@ -103,7 +113,7 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     final_report=None,
                     stage=1
                 )
-                if validate_audience_segments(updated_json):
+                if validate_audience_segments(ensure_dict(updated_json)):
                     st.success("Audience segments updated successfully.")
                     st.rerun()
     
@@ -125,7 +135,7 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     final_report=None,
                     stage=1
                 )
-                if validate_audience_segments(updated_json):
+                if validate_audience_segments(ensure_dict(updated_json)):
                     st.success("Unselected segments deleted successfully.")
                     st.rerun()
     
@@ -146,7 +156,7 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     final_report=None,
                     stage=1
                 )
-                if validate_audience_segments(updated_json):
+                if validate_audience_segments(ensure_dict(updated_json)):
                     st.success("Segments reduced successfully.")
                     st.rerun()
     
@@ -167,7 +177,7 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     final_report=None,
                     stage=1
                 )
-                if validate_audience_segments(updated_json):
+                if validate_audience_segments(ensure_dict(updated_json)):
                     st.success("Reach expanded successfully.")
                     st.rerun()
 
