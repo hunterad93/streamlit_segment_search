@@ -219,6 +219,11 @@ def generate_methodology_report() -> None:
 def main() -> None:
     """Main function to run the Streamlit app."""
     st.set_page_config(layout="wide")
+
+    password = st.text_input("Enter password:", type="password")
+    if password != st.secrets["app_password"]:  # Ensure this key exists in your secrets
+        st.error("Incorrect password. Please try again.")
+        return  # Exit the main function if the password is incorrect
     
     # Initialize or reset state for new sessions
     if 'session_id' not in st.session_state:
