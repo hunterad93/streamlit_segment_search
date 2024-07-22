@@ -48,6 +48,12 @@ def style_dataframe(df, segment_scores):
 
 def main():
     st.set_page_config(layout="wide")
+
+    password = st.text_input("Enter password:", type="password")
+    if password != st.secrets["app_password"]:  # Ensure this key exists in your secrets
+        st.error("Incorrect password. Please try again.")
+        return  # Exit the main function if the password is incorrect
+
     st.title("3rd Party Data Segment Search")
     st.subheader("Describe the audience segment you are looking for in a few words.")
     st.subheader("Note: 'Segment Score' takes into account both segment cost and relevance score to desired segment, green/red shades are determined by this score.")
