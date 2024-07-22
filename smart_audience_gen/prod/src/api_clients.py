@@ -2,7 +2,7 @@ import requests
 from openai import OpenAI
 from groq import Groq
 from tenacity import retry, stop_after_attempt, wait_exponential, before_sleep_log
-from config.settings import ONLINE_MODEL, PPLX_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, OPEN_ROUTER_KEY, OPENAI_MODEL, OPEN_ROUTER_MODEL, GROQ_MODEL, CONTEXT_LENGTH_START, CONTEXT_LENGTH_END, API_SELECTOR
+from config.settings import ONLINE_MODEL, OFFLINE_MODEL, PPLX_API_KEY, OPENAI_API_KEY, GROQ_API_KEY, OPEN_ROUTER_KEY, OPENAI_MODEL, OPEN_ROUTER_MODEL, GROQ_MODEL, CONTEXT_LENGTH_START, CONTEXT_LENGTH_END, API_SELECTOR
 from config.prompts import BASIC_SYSTEM_PROMPT
 import logging
 
@@ -75,3 +75,7 @@ def route_api_call(api_selector = API_SELECTOR, messages = []):
         return send_api_message(groq_client, messages, GROQ_MODEL)
     elif api_selector == 'open_router':
         return send_api_message(open_router_client, messages, OPEN_ROUTER_MODEL)
+    elif api_selector == 'online_perplexity':
+        return send_api_message(open_router_client, messages, ONLINE_MODEL)
+    elif api_selector == 'offline_perplexity':
+        return send_api_message(open_router_client, messages, OFFLINE_MODEL)

@@ -4,7 +4,7 @@ from src.api_clients import send_perplexity_message, route_api_call
 from src.data_processing import extract_and_correct_json
 from typing import Dict, Any, List, Tuple
 import streamlit as st
-
+from config.settings import ONLINE_MODEL
 from config.prompts import (
     COMPANY_RESEARCH_PROMPT,
     AUDIENCE_BUILD_PROMPT,
@@ -36,7 +36,7 @@ def generate_company_description(company_name, conversation_history):
     prompt = COMPANY_RESEARCH_PROMPT.format(company_name=company_name)
     conversation_history.append({"role": "user", "content": prompt})
     
-    response = send_perplexity_message(conversation_history)
+    response = route_api_call('online_perplexity', conversation_history)  # Change here
     conversation_history.append({"role": "assistant", "content": response})
     
     return response, conversation_history

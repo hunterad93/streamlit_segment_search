@@ -2,13 +2,13 @@ from typing import Dict, List
 
 from config.settings import ONLINE_MODEL, OFFLINE_MODEL
 from config.prompts import ONLINE_SYSTEM_PROMPT, OFFLINE_SYSTEM_PROMPT, SUMMARY_PROMPT, INITIAL_RESEARCH_PROMPT, FOLLOW_UP_PROMPT, CATEGORIZE_SEGMENT_PROMPT, BASIC_SYSTEM_PROMPT
-from src.api_clients import send_perplexity_message
+from src.api_clients import send_perplexity_message, route_api_call
 from src.pinecone_utils import cache_summary, get_cached_summary
 import concurrent.futures
 
 def categorize_segment(segment):
     messages = [{"role": "user", "content": CATEGORIZE_SEGMENT_PROMPT.format(segment=segment)}]
-    response = send_perplexity_message(messages, OFFLINE_MODEL)
+    response = route_api_call('online_perplexity', messages)  # Change here
     return response
 
 def summarize_conversation(initial_prompt, conversation_history):
@@ -16,10 +16,7 @@ def summarize_conversation(initial_prompt, conversation_history):
         initial_prompt=initial_prompt,
         conversation_history=conversation_history
     )
-    summary = send_perplexity_message(
-        [{"role": "user", "content": formatted_summary_prompt}],
-        OFFLINE_MODEL
-    )
+    summary = route_api_call('offline_perplexity', [{"role": "user", "content": formatted_summary_prompt}])
     return summary
 
 def create_conversation(domain: str, segment: str, num_iterations: int) -> tuple[List[Dict[str, str]], str]:
@@ -44,17 +41,17 @@ def create_conversation(domain: str, segment: str, num_iterations: int) -> tuple
     offline_conversation = []
 
     for i in range(num_iterations):
-        online_response = send_perplexity_message(online_conversation, ONLINE_MODEL)
+        online_response = route_api_call('online_perplexity', online_conversation)  # Change here
         online_conversation.append({"role": "assistant", "content": online_response})
         
         offline_conversation = online_conversation.copy()
         
         if i < num_iterations - 1:
             offline_conversation.append({"role": "user", "content": FOLLOW_UP_PROMPT})
-            follow_up_question = send_perplexity_message(offline_conversation, OFFLINE_MODEL)
+            follow_up_question = route_api_call('offline_perplexity', offline_conversation)  # Change here
             online_conversation.append({"role": "user", "content": follow_up_question})
 
-    summary = summarize_conversation(initial_prompt, offline_conversation)
+    summary = summarize_conversation(initial_prompt, offline_conversation)  
     
     # Cache the new summary
     cache_summary(domain, data_type, initial_prompt, summary)
@@ -71,7 +68,7 @@ def generate_segment_summaries(segments):
             "summary": summary
         }
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=2) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
         summaries = list(executor.map(process_segment, segments))
 
     return summaries
