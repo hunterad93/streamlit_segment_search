@@ -85,7 +85,7 @@ def handle_user_feedback(audience_json: Dict[str, Any]) -> None:
                 final_report=None,
                 stage=1
             )
-            if validate_audience_segments(ensure_dict(updated_json)):
+            if validate_audience_segments((updated_json)):
                 st.success("Feedback applied successfully.")
                 st.rerun()
 
@@ -113,7 +113,7 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     final_report=None,
                     stage=1
                 )
-                if validate_audience_segments(ensure_dict(updated_json)):
+                if validate_audience_segments((updated_json)):
                     st.success("Audience segments updated successfully.")
                     st.rerun()
     
@@ -135,7 +135,7 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     final_report=None,
                     stage=1
                 )
-                if validate_audience_segments(ensure_dict(updated_json)):
+                if validate_audience_segments((updated_json)):
                     st.success("Unselected segments deleted successfully.")
                     st.rerun()
     
@@ -156,7 +156,7 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     final_report=None,
                     stage=1
                 )
-                if validate_audience_segments(ensure_dict(updated_json)):
+                if validate_audience_segments((updated_json)):
                     st.success("Segments reduced successfully.")
                     st.rerun()
     
@@ -177,7 +177,7 @@ def handle_segment_selection(audience_json: Dict[str, Any]) -> None:
                     final_report=None,
                     stage=1
                 )
-                if validate_audience_segments(ensure_dict(updated_json)):
+                if validate_audience_segments((updated_json)):
                     st.success("Reach expanded successfully.")
                     st.rerun()
 
@@ -268,7 +268,8 @@ def main() -> None:
         if use_presearch_filter != StateManager.get('use_presearch_filter'):
             StateManager.update(
                 use_presearch_filter=use_presearch_filter,
-                post_search_results=None
+                post_search_results=None,
+                stage=1
             )
 
         
