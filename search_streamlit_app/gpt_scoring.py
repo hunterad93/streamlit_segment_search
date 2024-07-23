@@ -50,8 +50,8 @@ def gpt_score_relevance(query: str, doc: str) -> float:
     Provide only a numeric score between 0 and 100, where 0 is not effective at all and 100 is extremely effective.
     """
 
-    response = open_router_client.chat.completions.create(
-        model="google/gemma-2-9b-it",
+    response = client.chat.completions.create(
+        model="gpt-4o-mini-2024-07-18",
         messages=[{"role": "user", "content": prompt}],
         max_tokens=100,
         temperature=0
