@@ -20,9 +20,6 @@ def search_and_rank_segments(query: str, vertical: str, presearch_filter: dict =
     # Initial processing without relevance score
     df = process_dataframe(df, query, vertical)
     
-    # Save intermediate DataFrame to CSV for debugging
-    df.to_csv('/Users/adamhunter/Documents/streamlit_segment_search/search_streamlit_app/debug_output_intermediate.csv', index=False)
-    
     # Generate relevance scores
     segment_descriptions = df['Segment Description'].tolist()
     confidence_scores = gpt_rerank_results(query, segment_descriptions)
@@ -33,9 +30,6 @@ def search_and_rank_segments(query: str, vertical: str, presearch_filter: dict =
     df['Segment Score'] = df['Segment Score'].round(3)
     df['Overall Normalized Score'] = df['Overall Normalized Score'].round(3)
     df[f'{vertical} Normalized Score'] = df[f'{vertical} Normalized Score'].round(3)
-    
-    # Save final DataFrame to CSV for debugging
-    df.to_csv('/Users/adamhunter/Documents/streamlit_segment_search/search_streamlit_app/debug_output_final.csv', index=False)
     
     return df.sort_values(['Segment Score', 'CPM Rate'], ascending=[False, True]).reset_index(drop=True)
 
