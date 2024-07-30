@@ -31,7 +31,7 @@ def search_and_rank_segments(query: str, vertical: str, presearch_filter: dict =
     df['Overall Normalized Score'] = df['Overall Normalized Score'].round(3)
     df[f'{vertical} Normalized Score'] = df[f'{vertical} Normalized Score'].round(3)
     
-    return df.sort_values(['Segment Score', 'CPM Rate'], ascending=[False, True]).reset_index(drop=True)
+    return df.sort_values(['Segment Score', 'Relevance Score', 'Overall Normalized Score', 'CPM Rate'], ascending=[False, False, False, True]).reset_index(drop=True)
 
 def main():
     st.set_page_config(layout="wide")
