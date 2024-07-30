@@ -27,8 +27,8 @@ def style_dataframe(df, vertical):
 def render_search_interface(verticals):
     st.title("3rd Party Data Segment Search")
     st.subheader("Describe the audience segment you are looking for in a few words.")
-    st.subheader("Note: 'Segment Score' takes into account both segment cost and relevance score to desired segment, green/red shades are determined by this score.")
-
+    st.subheader("Note: 'Segment Score' is a composite metric combining z-scores of CPA (lower is better) and CTR (higher is better), along with the relevance score to the desired segment. This score is normalized to a 0-100 range. The green/red shades in the visualization are determined by this score."
+)
     selected_vertical = st.selectbox("Select campaign vertical:", verticals)
     query = st.text_input("Enter your search query:")
     search_depth = st.slider("Search depth", min_value=50, max_value=500, value=300, step=50)
