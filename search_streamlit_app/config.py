@@ -131,3 +131,28 @@ MEXICAN_CITIES = [
 ]
 
 NON_US_LOCATIONS = EU_CITIES + ASIA_CITIES + SOUTH_AMERICAN_CITIES + CANADIAN_CITIES + MEXICAN_CITIES + NON_US_ABBREVIATIONS + NON_US_COUNTRIES
+
+VERTICALS = [
+    'Government',
+    'Healthcare',
+    'Retail',
+    'Energy',
+    'Arts, Entertainment, and Recreation',
+    'Hospitality and Tourism',
+    'Education',
+    'Computer & Electronics',
+    'CPG',
+    'Transportation and Logistics',
+    'Pharmaceuticals and Biotechnology',
+    'Finance',
+    'Agriculture',
+    'Professional Services',
+    'QSR',
+    'Automotive',
+    'Nonprofit and Social Services',
+    'Real Estate',
+    'Telecommunications',
+    'Media and Entertainment',
+    'Construction',
+    'Technology'
+]

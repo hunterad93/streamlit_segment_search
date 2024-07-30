@@ -13,26 +13,7 @@ open_router_client = OpenAI(
   api_key=OPEN_ROUTER_KEY,
 )
 
-def filter_non_us(df: pd.DataFrame) -> pd.DataFrame:
-    # Compile the pattern once
-    pattern = re.compile(r'\b(' + '|'.join(map(re.escape, NON_US_LOCATIONS)) + r')\b', re.IGNORECASE)
-    
-    # Concatenate relevant columns only
-    relevant_columns = ['Segment Name', 'Segment Description', 'Brand Name', 'Segment ID']
-    df['concatenated'] = df[relevant_columns].astype(str).agg(' '.join, axis=1)
-    
-    # Use vectorized operations
-    mask = ~df['concatenated'].str.contains(pattern, regex=True)
-    
-    # Apply the mask and drop the temporary column
-    filtered_df = df[mask].drop(columns=['concatenated'])
-    
-    print(f"Filtered out {len(df) - len(filtered_df)} non-US locations")
-    
-    return filtered_df
 
-def filter_duplicates(df: pd.DataFrame) -> pd.DataFrame:
-    return df.drop_duplicates(subset=['Segment Description', 'Segment Name'], keep='first')
 
 @tenacity.retry(stop=tenacity.stop_after_attempt(6), wait=tenacity.wait_exponential(multiplier=1, min=4, max=60))
 def gpt_score_relevance(query: str, doc: str) -> float:
@@ -89,7 +70,7 @@ def gpt_rerank_results(query: str, docs: List[str], max_workers: int = 10) -> Di
         scores = dict(executor.map(score_doc, docs))
     
     # Calculate and print the number *1000000/50
-    token_cost = (total_tokens / 1000000) * 0.5
+    token_cost = (total_tokens / 1000000) * 0.15
     print(f"Estimated rerank cost: ${token_cost:.6f}")
     
     return scores
