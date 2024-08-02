@@ -113,13 +113,6 @@ def add_metrics_columns(df: pd.DataFrame, vertical: str) -> pd.DataFrame:
     
     return df
 
-def calculate_segment_score(df: pd.DataFrame, vertical: str) -> pd.DataFrame:
-    df['Segment Score'] = df['Relevance Score'] * df[f'{vertical} Normalized Score'] / 100
-    df['Segment Score'] = df['Segment Score'].round(3)
-    df['Overall Normalized Score'] = df['Overall Normalized Score'].round(3)
-    df[f'{vertical} Normalized Score'] = df[f'{vertical} Normalized Score'].round(3)
-    return df
-
 def filter_non_us(df: pd.DataFrame) -> pd.DataFrame:
     # Compile the pattern once
     pattern = re.compile(r'\b(' + '|'.join(map(re.escape, NON_US_LOCATIONS)) + r')\b', re.IGNORECASE)

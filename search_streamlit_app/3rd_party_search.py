@@ -4,7 +4,6 @@ from embedding import generate_embedding
 from pinecone_utils import query_pinecone
 from data_processing import (
     results_to_dataframe,
-    calculate_segment_score,
     process_dataframe
 )
 from gpt_scoring import gpt_rerank_results
@@ -26,12 +25,12 @@ def search_and_rank_segments(query: str, vertical: str, presearch_filter: dict =
     df['Relevance Score'] = df['Segment Description'].map(lambda x: confidence_scores.get(x, 0.0))
     
     # Calculate final segment score
-    df['Segment Score'] = df['Relevance Score'] * df[f'{vertical} Normalized Score'] / 100
+    df['Segment Score'] = df['Relevance Score'] * df['Overall Normalized Score'] / 100
     df['Segment Score'] = df['Segment Score'].round(3)
     df['Overall Normalized Score'] = df['Overall Normalized Score'].round(3)
     df[f'{vertical} Normalized Score'] = df[f'{vertical} Normalized Score'].round(3)
     
-    return df.sort_values(['Segment Score', 'Relevance Score', 'Overall Normalized Score', 'CPM Rate'], ascending=[False, False, False, True]).reset_index(drop=True)
+    return df.sort_values(['Relevance Score', 'Segment Score', 'Overall Normalized Score', 'CPM Rate'], ascending=[False, False, False, True]).reset_index(drop=True)
 
 def main():
     st.set_page_config(layout="wide")
@@ -41,14 +40,14 @@ def main():
         st.error("Incorrect password. Please try again.")
         return
 
-    selected_vertical, query, search_depth, search_button = render_search_interface(VERTICALS)
+    selected_vertical, query, search_button = render_search_interface(VERTICALS)
 
     if search_button and query:
         with st.spinner(f"Searching and ranking top segments..."):
-            results = search_and_rank_segments(query, selected_vertical, top_k=search_depth)
+            results = search_and_rank_segments(query, selected_vertical, top_k=300)
 
         st.success("Search completed!")
-        render_results(results, selected_vertical, search_depth)
+        render_results(results, selected_vertical)
 
 if __name__ == "__main__":
     main()
