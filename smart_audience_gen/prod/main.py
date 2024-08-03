@@ -7,7 +7,7 @@ import json
 from src.ui_components import (
     render_company_input, render_json_diff, render_actual_segments,
     render_audience_report, render_button, render_user_feedback,
-    render_segment_selection, render_presearch_filter_option, render_segment_details)
+    render_segment_selection, render_optimization_strategy_dropdown, render_segment_details)
 from src.state_management import StateManager
 from src.data_processing import ensure_dict
 from src.audience_generation import generate_audience, process_user_feedback, update_audience_segments, delete_unselected_segments
@@ -49,7 +49,7 @@ def validate_audience_segments(json_data: Dict[str, Any]) -> bool:
 def process_audience_data(extracted_json: Dict[str, Any], use_presearch_filter: bool) -> Dict[str, Any]:
     """Process the extracted audience data."""
     presearch_filter = {"BrandName": "Data Alliance"} if use_presearch_filter else {}
-    processed_results = process_audience_segments(extracted_json, presearch_filter=presearch_filter, top_k=PINECONE_TOP_K)
+    processed_results = process_audience_segments(extracted_json, presearch_filter=presearch_filter, top_k=PINECONE_TOP_K, optimization_strategy=StateManager.get('optimization_strategy'))
     return summarize_segments(processed_results)
 
 def generate_initial_audience(company_name: str, conversation_history: list) -> None:
@@ -261,6 +261,7 @@ def main() -> None:
                 render_json_diff(StateManager.get('old_audience_json'), ensure_dict(StateManager.get('extracted_audience_json')))
             
             handle_user_feedback(ensure_dict(StateManager.get('extracted_audience_json')))
+
         except Exception as e:
             print(f"An error occurred during feedback handling: {str(e)}")
             st.error(f"An error occurred during feedback handling: {str(e)}")
@@ -268,13 +269,14 @@ def main() -> None:
             st.warning("State is reverting to the last known valid state. Try a different command.")
             time.sleep(5)
             st.rerun()
-
-        use_presearch_filter = render_presearch_filter_option()
-        if use_presearch_filter != StateManager.get('use_presearch_filter'):
+        
+        # Add the optimization strategy dropdown here
+        optimization_strategy = render_optimization_strategy_dropdown()
+        if optimization_strategy != StateManager.get('optimization_strategy'):
             StateManager.update(
-                use_presearch_filter=use_presearch_filter,
-                post_search_results=None,
-                stage=1
+                optimization_strategy=optimization_strategy,
+                stage=1,
+                post_search_results=None
             )
 
         

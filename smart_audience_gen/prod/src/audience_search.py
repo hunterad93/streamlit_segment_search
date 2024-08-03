@@ -1,5 +1,5 @@
 import streamlit as st
-from typing import Dict, List
+from typing import Dict, List, Literal
 import pandas as pd
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
@@ -8,26 +8,63 @@ from .embedding import generate_embedding
 from .pinecone_utils import query_pinecone
 from .segment_processing import process_single_segment, filter_non_us
 from config.settings import RELEVANCE_THRESHOLD, MAX_RERANK_WORKERS, SECONDARY_RELEVANCE_THRESHOLD
+import numpy as np
 
+def calculate_z_score(series):
+    return (series - series.mean()) / series.std()
 
-def find_relevant_segments(query: str, presearch_filter: dict, top_k: int) -> pd.DataFrame:
+def find_relevant_segments(
+    query: str, 
+    presearch_filter: dict, 
+    top_k: int, 
+    vertical: str = 'overall', 
+    optimization_strategy: Literal['ctr', 'cpa', 'composite'] = 'composite'
+) -> pd.DataFrame:
     query_embedding = generate_embedding(query)
     query_results = query_pinecone(query_embedding, top_k, presearch_filter)
     df = results_to_dataframe(query_results)
     df = filter_non_us(df)
-    df = df.sort_values(['vector_score', 'CPMRateInAdvertiserCurrency_Amount', 'UniqueUserCount'], 
-                       ascending=[False, True, False]).reset_index(drop=True)
+
+    # Use the vertical-specific CTR and CPA columns
+    ctr_column = f'{vertical}_ctr'
+    cpa_column = f'{vertical}_cpa'
+
+    # Check if the columns exist and have non-null values
+    if ctr_column in df.columns and cpa_column in df.columns and df[ctr_column].notna().any() and df[cpa_column].notna().any():
+        # Calculate z-scores
+        df['ctr_z_score'] = calculate_z_score(df[ctr_column].dropna())
+        df['cpa_z_score'] = calculate_z_score(df[cpa_column].dropna())
+        
+        # Calculate optimization score based on strategy
+        if optimization_strategy == 'ctr':
+            df['optimization_score'] = df['ctr_z_score']
+        elif optimization_strategy == 'cpa':
+            df['optimization_score'] = -df['cpa_z_score']  # Negative because lower CPA is better
+        else:  # 'composite'
+            df['optimization_score'] = df['ctr_z_score'] - df['cpa_z_score']
+        
+        # Sort by optimization score (descending) and vector score
+        df = df.sort_values(['optimization_score', 'vector_score'], ascending=[False, False], na_position='last').reset_index(drop=True)
+    else:
+        # If CTR/CPA data is not available, sort only by vector score
+        print(f"Warning: {ctr_column} or {cpa_column} not available. Sorting only by vector score.")
+        df = df.sort_values('vector_score', ascending=False).reset_index(drop=True)
+        df['optimization_score'] = np.nan  # Add an optimization_score column with NaN values
 
     processed_segments = []
     segments_searched = 0
-
     with ThreadPoolExecutor(max_workers=MAX_RERANK_WORKERS) as executor:
         futures = [executor.submit(process_single_segment, query, segment) for segment in df.to_dict('records')]
         
         for future in as_completed(futures):
             processed_segment = future.result()
+            optimization_score = df.loc[segments_searched, 'optimization_score']
+            processed_segment['optimization_score'] = optimization_score
             processed_segments.append(processed_segment)
             segments_searched += 1
+            
+            print(f"Segment {segments_searched}: Relevance score = {processed_segment['relevance_score']:.4f}, "
+                  f"Optimization score ({optimization_strategy}) = {optimization_score:.4f}")
             
             if processed_segment['relevance_score'] >= RELEVANCE_THRESHOLD:
                 executor.shutdown(wait=False, cancel_futures=True)
@@ -38,8 +75,8 @@ def find_relevant_segments(query: str, presearch_filter: dict, top_k: int) -> pd
     
     # If no high-relevance segments found, return top 3 segments above secondary threshold
     secondary_segments = [s for s in processed_segments if s['relevance_score'] >= SECONDARY_RELEVANCE_THRESHOLD]
-    secondary_segments.sort(key=lambda x: x['relevance_score'], reverse=True)
-    top_3_secondary = secondary_segments[:3]
+    secondary_segments.sort(key=lambda x: (x['optimization_score'], x['relevance_score']), reverse=True)
+    top_3_secondary = secondary_segments[:2]
     
     if top_3_secondary:
         print(f"Returning top {len(top_3_secondary)} segments above secondary threshold")
@@ -47,7 +84,7 @@ def find_relevant_segments(query: str, presearch_filter: dict, top_k: int) -> pd
     
     return pd.DataFrame()  # Return empty DataFrame if no high-relevance segment found
 
-def process_audience_segments(audience_json, presearch_filter, top_k):
+def process_audience_segments(audience_json, presearch_filter, top_k, optimization_strategy):
     results = {'Audience': {}}
     total_items = sum(len(descriptions) for category in ['included', 'excluded'] 
                       for descriptions in audience_json['Audience'][category].values())
@@ -55,9 +92,9 @@ def process_audience_segments(audience_json, presearch_filter, top_k):
     progress_bar = st.progress(0)
     processed_items = 0
 
-    def process_item(item, category, group):
+    def process_item(item, category, group, optimization_strategy):
         query = item['description']
-        relevant_segment = find_relevant_segments(query, presearch_filter, top_k)
+        relevant_segment = find_relevant_segments(query, presearch_filter, top_k, optimization_strategy=optimization_strategy)
         return {
             'description': query,
             'ActualSegments': relevant_segment.to_dict('records') if not relevant_segment.empty else [],
@@ -70,7 +107,7 @@ def process_audience_segments(audience_json, presearch_filter, top_k):
         for category in ['included', 'excluded']:
             results['Audience'][category] = {}
             for group, descriptions in audience_json['Audience'][category].items():
-                futures.extend([executor.submit(process_item, item, category, group) for item in descriptions])
+                futures.extend([executor.submit(process_item, item, category, group, optimization_strategy) for item in descriptions])
 
         for future in as_completed(futures):
             result = future.result()
@@ -99,7 +136,10 @@ def summarize_segments(processed_results):
                 for segment in item['ActualSegments']:
                     summarized_segment = {
                         'ActualSegment': segment['raw_string'],
-                        'BrandName': segment['BrandName']
+                        'BrandName': segment['BrandName'],
+                        'Historical CTR': segment.get('overall_ctr', 'Not Available'),
+                        'Historical CPA': segment.get('overall_cpa', 'Not Available'),
+                        'Relevance Score': segment['relevance_score']
                     }
                     summarized_segments.append(summarized_segment)
                 group_results.append({

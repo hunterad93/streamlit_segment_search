@@ -20,6 +20,7 @@ class StateManager:
         st.session_state.last_feedback = ""
         st.session_state.state_backup = None
         st.session_state.user_feedback = ""
+        st.session_state.optimization_strategy = ""
 
 
     @staticmethod

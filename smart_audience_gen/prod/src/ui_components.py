@@ -5,7 +5,7 @@ import re
 
 
 def render_company_input():
-    return st.text_input("Enter company name or brief campaign desription:", "Bubba Burgers")
+    return st.text_input("Enter any company name or brief campaign desription:", "McDonalds")
 
 def render_user_feedback():
     return st.text_input("Provide feedback on the audience segments:")
@@ -13,8 +13,19 @@ def render_user_feedback():
 def render_apply_feedback_button():
     return st.button("Apply Feedback")
 
+def render_optimization_strategy_dropdown():
+    return st.selectbox(
+        "Select Optimization Strategy",
+        options=['composite', 'ctr', 'cpa'],
+        index=0,
+        help="Choose the strategy for segment selection, lowest CPA, highest CTR, or a composite score that optimizes both."
+    )
+
 def display_actual_segment(actual_segment):
     brand_name = actual_segment.get("BrandName", "N/A")
+    historical_ctr = actual_segment.get("Historical CTR", "None Available")
+    historical_cpa = actual_segment.get("Historical CPA", "None Available")
+    relevance_score = actual_segment.get("Relevance Score", "None Available")
     full_segment = actual_segment.get("ActualSegment", "")
     
     full_path_match = re.search(r"Full Path: (.+?),", full_segment)
@@ -26,6 +37,9 @@ def display_actual_segment(actual_segment):
     st.markdown(f"  - **Brand Name:** {brand_name}")
     st.markdown(f"  - **Full Path:** {full_path}")
     st.markdown(f"  - **Description:** {description}")
+    st.markdown(f"  - **Historical CTR:** {historical_ctr}")
+    st.markdown(f"  - **Historical CPA:** {historical_cpa}")
+    st.markdown(f"  - **Relevance Score:** {relevance_score}")
     st.markdown("---")
 
 def render_actual_segments(data):
