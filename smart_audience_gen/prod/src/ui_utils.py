@@ -29,4 +29,19 @@ def get_json_diff(old_json, new_json):
             else:
                 changes[change_type].append(description)
 
+    # Handle changed values
+    for change in diff.get("values_changed", {}).values():
+        old_value = extract_description(change.get('old_value'))
+        new_value = extract_description(change.get('new_value'))
+        
+        if isinstance(old_value, list):
+            changes["removed"].extend(old_value)
+        else:
+            changes["removed"].append(old_value)
+        
+        if isinstance(new_value, list):
+            changes["added"].extend(new_value)
+        else:
+            changes["added"].append(new_value)
+
     return changes
