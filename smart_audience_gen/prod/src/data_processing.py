@@ -1,6 +1,8 @@
 import pandas as pd
 import json
 import re
+import time
+import streamlit as st
 from typing import Dict, Any
 
 def extract_and_correct_json(text):
@@ -44,6 +46,35 @@ def extract_and_correct_json(text):
         print("JSON string after corrections:")
         print(json_string)
         return None
+    
+def validate_audience_segments(json_data: Dict[str, Any]) -> bool:
+    """
+    Validate the number of segments in the audience JSON.
+    Returns True if valid, False if invalid and state is reverted.
+    """
+    
+    # Convert to string if it's not already
+    if not isinstance(json_data, str):
+        json_str = json.dumps(json_data)
+    else:
+        json_str = json_data
+
+    
+    description_count = json_str.lower().count('"description":')
+    
+    if description_count > 60:
+        st.warning("Too many segments generated. Reverting to previous state.")
+        StateManager.restore_backup()
+        time.sleep(3)
+        st.rerun()
+        return False
+    elif description_count < 2:
+        st.warning("Not enough segments generated. Reverting to previous state.")
+        StateManager.restore_backup()
+        time.sleep(3)
+        st.rerun()
+        return False
+    return True
 
 def flatten_dict(d, parent_key='', sep='_'):
     items = []

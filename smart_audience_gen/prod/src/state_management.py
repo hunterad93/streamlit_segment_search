@@ -49,6 +49,19 @@ class StateManager:
         #     json.dump(state_dict, f, indent=2, default=str)
 
     @staticmethod
+    def update_audience_segments(old_audience_json, new_audience_json, conversation_history):
+        StateManager.update(
+            old_audience_json=old_audience_json,
+            extracted_audience_json=new_audience_json,
+            conversation_history=conversation_history,
+            post_search_results=None,
+            summary_results=None,
+            audience_report=None,
+            final_report=None,
+            stage=1
+        )
+
+    @staticmethod
     def get(attr):
         return st.session_state.get(attr)
     
