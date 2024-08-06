@@ -130,11 +130,6 @@ def render_json_diff(old_json, new_json):
             for item in diff["removed"]:
                 st.markdown(f"- {item}")
 
-    if diff["changed"]:
-        with st.expander(f"Changed Segments ({len(diff['changed'])})", expanded=False):
-            for item in diff["changed"]:
-                st.markdown(f"- {item}")
-
 def render_segment_details(segments):
     st.subheader("Segment Details")
     
