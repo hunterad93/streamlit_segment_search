@@ -68,7 +68,7 @@ def generate_segment_summaries(segments):
             "summary": summary
         }
 
-    with concurrent.futures.ThreadPoolExecutor(max_workers=20) as executor:
+    with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
         summaries = list(executor.map(process_segment, segments))
 
     return summaries

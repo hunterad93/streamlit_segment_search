@@ -4,8 +4,8 @@ import streamlit as st
 EMBEDDING_MODEL = "text-embedding-3-large" # Embedding model used to create vectors to search pinecone
 PINECONE_INDEX_NAME = "3rd-party-data-v2" # Pinecone index name
 PINECONE_CACHE_INDEX = "researcher-cache" # Pinecone cache index name
-ONLINE_MODEL = "perplexity/llama-3-sonar-large-32k-online" # Online model used for company research
-OFFLINE_MODEL = "perplexity/llama-3-sonar-large-32k-chat" # Offline model used for company research
+ONLINE_MODEL = "perplexity/llama-3.1-sonar-large-128k-online" # Online model used for company research
+OFFLINE_MODEL = "perplexity/llama-3.1-sonar-large-128k-chat" # Offline model used for company research
 OPENAI_MODEL = "gpt-4o-2024-05-13" # OpenAI model used for audience generation
 GROQ_MODEL = "llama3-70b-8192" # Groq model used for audience generation
 OPEN_ROUTER_MODEL = "anthropic/claude-3.5-sonnet" # Open Router model used for audience generation # anthropic/claude-3.5-sonnet # meta-llama/llama-3-70b-instruct
