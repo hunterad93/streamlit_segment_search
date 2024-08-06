@@ -4,14 +4,15 @@ from deepdiff import DeepDiff
 def extract_description(item):
     if isinstance(item, dict) and 'description' in item:
         return item['description']
-    elif isinstance(item, str):
-        return item
     elif isinstance(item, list):
         return [extract_description(subitem) for subitem in item]
-    else:
-        return str(item)  # fallback for unexpected types
+    return str(item)
 
 def get_json_diff(old_json, new_json):
+    if isinstance(old_json, str):
+        old_json = json.loads(old_json)
+    if isinstance(new_json, str):
+        new_json = json.loads(new_json)
 
     diff = DeepDiff(old_json, new_json, verbose_level=2)
     
@@ -20,13 +21,12 @@ def get_json_diff(old_json, new_json):
         "removed": []
     }
     
-    for key, value in diff.items():
-        if key in ["dictionary_item_added", "iterable_item_added"]:
-            for path, item in value.items():
-                changes["added"].extend(extract_description(item))
-        
-        elif key in ["dictionary_item_removed", "iterable_item_removed"]:
-            for path, item in value.items():
-                changes["removed"].extend(extract_description(item))
+    for change_type in ["added", "removed"]:
+        for item in diff.get(f"dictionary_item_{change_type}", {}).values():
+            description = extract_description(item)
+            if isinstance(description, list):
+                changes[change_type].extend(description)
+            else:
+                changes[change_type].append(description)
 
     return changes
