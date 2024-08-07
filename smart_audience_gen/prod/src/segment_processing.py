@@ -67,7 +67,8 @@ def gpt_score_relevance(query: str, doc: str) -> float:
         model=RERANKER_MODEL,
         messages=[{"role": "user", "content": formatted_rerank_prompt}],
         max_tokens=100,
-        temperature=0
+        temperature=0,
+        timeout=30
     )
     
     if not response.choices or len(response.choices) == 0:
